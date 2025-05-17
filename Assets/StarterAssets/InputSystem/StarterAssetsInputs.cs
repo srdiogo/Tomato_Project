@@ -29,7 +29,22 @@ namespace StarterAssets
 		{
 			MoveInput(value.Get<Vector2>());
 		}
-
+		public void OnAim(InputValue value)
+		{
+			AimInput(value.isPressed);
+		}
+		public void OnShoot(InputValue value)
+		{
+			ShootInput(value.isPressed);
+		}
+		public void OnReload(InputValue value)
+		{
+			ReloadInput(value.isPressed);
+		}
+		public void OnWalk(InputValue value)
+		{
+			WalkInput(value.isPressed);
+		}
 		public void OnLook(InputValue value)
 		{
 			if(cursorInputForLook)
@@ -63,6 +78,22 @@ namespace StarterAssets
 		public void JumpInput(bool newJumpState)
 		{
 			jump = newJumpState;
+		}
+		public void AimInput(bool newAimState)
+		{
+			aim = newAimState;
+		}
+		public void ShootInput(bool newShootState)
+		{
+			shoot = newShootState;
+		}
+		public void ReloadInput(bool newReloadState)
+		{
+			reload = newReloadState;
+		}
+		public void WalkInput(bool newWalkState)
+		{
+			walk = newWalkState;
 		}
 
 		public void SprintInput(bool newSprintState)

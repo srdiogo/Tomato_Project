@@ -16,6 +16,7 @@ namespace StarterAssets
 #endif
     public class ThirdPersonController : MonoBehaviour
     {
+        [SerializeField] private bool armed;
         [FormerlySerializedAs("MoveSpeed")]
         [Header("Player")]
         public float WalkSpeed = 2.0f;
@@ -162,6 +163,15 @@ namespace StarterAssets
 
             JumpAndGravity();
             GroundedCheck();
+            
+            _animator.SetFloat("Armed", armed ? 1 : 0);
+
+            if (_input.walk)
+            {
+                _input.walk = false;
+                _walking = !_walking;
+                    
+            }
             targetSpeed = RunSpeed;
             if(_input.sprint)
             {
