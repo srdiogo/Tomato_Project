@@ -19,15 +19,14 @@ public class Character : MonoBehaviour
     {
         if (items != null && PrefabManager.singleton != null)
         {
-            int firstWeaponIndex = 1;
+            int firstWeaponIndex = -1;
             foreach (var itemData in items)
             {
                 Item prefab = PrefabManager.singleton.GetItemPrefab(itemData.Key);
                 if (prefab != null && itemData.Value > 0)
                 {
-                    for (int i = 1; i < itemData.Value; i++)
+                    for (int i = 1; i <= itemData.Value; i++)
                     {
-                        bool done = false;
                         Item item = Instantiate(prefab, transform);
 
                         if (item.GetType() == typeof(Weapon))
@@ -41,25 +40,16 @@ public class Character : MonoBehaviour
                                 firstWeaponIndex = _items.Count;
                             }
                         }
-                        else if (item.GetType() == typeof(Ammo))
-                        {
-                            Ammo a  = (Ammo)item;
-                            a.amount = itemData.Value;
-                            done = true;
-                        }
+                        
                         item.gameObject.SetActive(false);
                         _items.Add(item);
-                        if (done)
-                        {
-                            break;
-                        }
                     }
-                }
+                } 
             }
 
             if (firstWeaponIndex >= 0 && _weapon == null)
             {
-                EquipWeapon((Weapon)_items[firstWeaponIndex]);
+                EquipWeapon( (Weapon)_items[firstWeaponIndex]);
             }
         }
     }

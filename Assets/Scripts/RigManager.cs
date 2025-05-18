@@ -32,7 +32,6 @@ public class RigManager : MonoBehaviour
             _leftHand.data.target.localEulerAngles = rotation;
         }
     }
-
     public void ApplyWeaponKick(float hand, float body)
     {
         _rightHand.data.offset = _originalRightHandOffset + _weaponHandKickDirection * hand;
