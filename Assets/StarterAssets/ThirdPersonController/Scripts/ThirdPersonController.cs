@@ -141,8 +141,8 @@ namespace StarterAssets
         {
             _rigManager = GetComponent<RigManager>();
             _character = GetComponent<Character>();
-            // ToDo: return if not local player
             
+            // ToDo: return if not local player
             _mainCamera = CameraManager.mainCamera.gameObject;
             CameraManager.playerCamera.m_Follow = CinemachineCameraTarget.transform;
             CameraManager.aimingCamera.m_Follow = CinemachineCameraTarget.transform;

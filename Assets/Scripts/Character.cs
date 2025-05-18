@@ -27,6 +27,7 @@ public class Character : MonoBehaviour
                 {
                     for (int i = 1; i <= itemData.Value; i++)
                     {
+                        bool done = false;
                         Item item = Instantiate(prefab, transform);
 
                         if (item.GetType() == typeof(Weapon))
@@ -40,9 +41,19 @@ public class Character : MonoBehaviour
                                 firstWeaponIndex = _items.Count;
                             }
                         }
+                        else if (item.GetType() == typeof(Ammo))
+                        {
+                            Ammo a = (Ammo)item;
+                            a.amount = itemData.Value;
+                            done = true;
+                        }
                         
                         item.gameObject.SetActive(false);
                         _items.Add(item);
+                        if (done)
+                        {
+                            break;
+                        }
                     }
                 } 
             }
@@ -79,5 +90,10 @@ public class Character : MonoBehaviour
             _weapon.gameObject.SetActive(false);
             _weapon = null;
         }
+    }
+
+    public void ApplyDamage(Character shooter, Transform hit, float damage)
+    {
+        
     }
 }
