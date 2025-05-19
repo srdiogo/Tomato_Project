@@ -42,7 +42,7 @@ public class Projectile : MonoBehaviour
         _shooter = shooter;
         _damage = damage;
         transform.LookAt(target);
-        _rigidbody.linearVelocity = transform.forward * _speed;
+        _rigidbody.linearVelocity = transform.forward.normalized * _speed;
         Destroy(gameObject, 5f);
     }
 

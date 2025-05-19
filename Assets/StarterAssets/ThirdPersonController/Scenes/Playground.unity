@@ -1718,30 +1718,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Managers
       objectReference: {fileID: 0}
-    - target: {fileID: 6872704712889867004, guid: 8329b26acc93a2e4784df6e34f4d0b72, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6872704712889867004, guid: 8329b26acc93a2e4784df6e34f4d0b72, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -4
-      objectReference: {fileID: 0}
     - target: {fileID: 7236149176720102428, guid: 8329b26acc93a2e4784df6e34f4d0b72, type: 3}
       propertyPath: m_Follow
       value: 
       objectReference: {fileID: 700051398}
-    - target: {fileID: 7896812257508319181, guid: 8329b26acc93a2e4784df6e34f4d0b72, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0.75
-      objectReference: {fileID: 0}
-    - target: {fileID: 7896812257508319181, guid: 8329b26acc93a2e4784df6e34f4d0b72, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 1.625
-      objectReference: {fileID: 0}
-    - target: {fileID: 7896812257508319181, guid: 8329b26acc93a2e4784df6e34f4d0b72, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -1.5
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

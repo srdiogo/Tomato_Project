@@ -118,7 +118,6 @@ namespace StarterAssets
         private bool _aiming = false;
         private bool _sprinting = false;
         private float _aimLayerWeight = 0;
-        private bool _reloading = false;
         private Vector2 _aimingMovingAnimationsInput = Vector2.zero;
         private float aimRigWeight = 0;
         private float leftHandRigWeight = 0;
@@ -182,11 +181,11 @@ namespace StarterAssets
             _animator.SetFloat("Armed", armed ? 1 : 0);
             _animator.SetFloat("Aimed", _aiming ? 1 : 0);
             
-            _aimLayerWeight = Mathf.Lerp(_aimLayerWeight, armed && (_aiming || _reloading) ? 1 : 0, 10f * Time.deltaTime);
+            _aimLayerWeight = Mathf.Lerp(_aimLayerWeight, _character.switchingWeapon || (armed && (_aiming || _character.reloading)) ? 1 : 0, 10f * Time.deltaTime);
             _animator.SetLayerWeight(1, _aimLayerWeight);
             
-            aimRigWeight = Mathf.Lerp(aimRigWeight, armed && _aiming && !_reloading ? 1 : 0, 10f * Time.deltaTime);
-            leftHandRigWeight = Mathf.Lerp(leftHandRigWeight, armed && !_reloading && (_aiming || (_controller.isGrounded && _character.weapon.type == Weapon.Handle.TwoHanded))  ? 1 : 0, 10f * Time.deltaTime);
+            aimRigWeight = Mathf.Lerp(aimRigWeight, armed && _aiming && !_character.reloading ? 1 : 0, 10f * Time.deltaTime);
+            leftHandRigWeight = Mathf.Lerp(leftHandRigWeight, armed && _character.switchingWeapon == false && !_character.reloading && (_aiming || (_controller.isGrounded && _character.weapon.type == Weapon.Handle.TwoHanded))  ? 1 : 0, 10f * Time.deltaTime);
 
             _rigManager.aimTarget = CameraManager.singleton.aimTargetPoint;
             _rigManager.aimWeight = aimRigWeight;
@@ -217,25 +216,26 @@ namespace StarterAssets
             _animator.SetFloat("Speed_X", _aimingMovingAnimationsInput.x);
             _animator.SetFloat("Speed_Y", _aimingMovingAnimationsInput.y);
 
-            if (_input.shoot && armed && !_reloading && _aiming && _character.weapon.Shoot(_character, CameraManager.singleton.aimTargetPoint))
+            if (_input.shoot && armed && !_character.reloading && _aiming && _character.weapon.Shoot(_character, CameraManager.singleton.aimTargetPoint))
             {
                 _rigManager.ApplyWeaponKick(_character.weapon.handKick, _character.weapon.bodyKick);
             }
 
-            if (_input.reload && !_reloading)
+            if (_input.reload && !_character.reloading)
             {
                 _input.reload = false;
-                _animator.SetTrigger("Reload");
-                _reloading = true;
+                _character.Reload();
+            }
+
+            if (_input.switchWeapon != 0)
+            {
+                _character.ChangeWeapon(_input.switchWeapon);
             }
             Move();
             Rotate();
         }
 
-        public void ReloadFinish()
-        {
-            _reloading = false;
-        }
+
         
         private void  Rotate()
         {
