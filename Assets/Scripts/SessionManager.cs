@@ -1,14 +1,13 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
 using LitJson;
-using TMPro;
-using Unity.Networking.Transport;
 
 public class SessionManager : NetworkBehaviour
 {
-    private static SessionManager _singleton;
 
+    private static SessionManager _singleton = null;
     public static SessionManager singleton
     {
         get
@@ -17,16 +16,15 @@ public class SessionManager : NetworkBehaviour
             {
                 _singleton = FindFirstObjectByType<SessionManager>();
             }
-
             return _singleton;
         }
     }
-    
+
     private Dictionary<ulong, Character> _characters = new Dictionary<ulong, Character>();
+
     public void StartServer()
     {
         NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-        //NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
         NetworkManager.Singleton.StartServer();
     }
 
@@ -35,18 +33,14 @@ public class SessionManager : NetworkBehaviour
         ulong[] target = new ulong[1];
         target[0] = clientId;
         ClientRpcParams clientRpcParams = default;
+        clientRpcParams.Send.TargetClientIds = target;
         OnClientConnectedClientRpc(clientRpcParams);
     }
 
-    /*private void OnClientDisconnected(ulong clientId)
-    {
-        _characters.Remove(clientId);   
-    }*/
-    
     [ClientRpc]
-    private void OnClientConnectedClientRpc(ClientRpcParams rpcParams = default)
+    public void OnClientConnectedClientRpc(ClientRpcParams rpcParams = default)
     {
-        // ToDo: passar id da conta
+        // ToDo: Pass the account id
         long accountID = 0;
         SpawnCharacterServerRpc(accountID);
     }
@@ -58,23 +52,23 @@ public class SessionManager : NetworkBehaviour
         if (prefab != null)
         {
             Vector3 position = new Vector3(UnityEngine.Random.Range(-5f, 5f), 0f, UnityEngine.Random.Range(-5f, 5f));
-            
+
             Character character = Instantiate(prefab, position, Quaternion.identity);
             character.GetComponent<NetworkObject>().SpawnWithOwnership(serverRpcParams.Receive.SenderClientId);
-            
+
             _characters.Add(serverRpcParams.Receive.SenderClientId, character);
 
-            Dictionary<string, int> items = new Dictionary<string, int> { { "AKM", 30 }, { "AWP", 30 }, { "h", 1000 } };
+            Dictionary<string, int> items = new Dictionary<string, int> { { "Scar", 30 }, { "7.62x39mm", 1000 } };
             List<string> itemsId = new List<string>();
             List<string> equippedIds = new List<string>();
-            for (int i = 0; i < items.Count ; i++)
+            for (int i = 0; i < items.Count; i++)
             {
                 itemsId.Add(System.Guid.NewGuid().ToString());
             }
-            
+
             string itemsJson = JsonMapper.ToJson(items);
             string itemsIdJson = JsonMapper.ToJson(itemsId);
-            string equippedIdsJson = JsonMapper.ToJson(equippedIds);
+            string equippedJson = JsonMapper.ToJson(equippedIds);
 
             Item[] allItems = FindObjectsByType<Item>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
             List<Item.Data> itemsOnGround = new List<Item.Data>();
@@ -82,9 +76,9 @@ public class SessionManager : NetworkBehaviour
             {
                 for (int i = 0; i < allItems.Length; i++)
                 {
-                    if (string.IsNullOrEmpty(allItems[i].networkId))
+                    if (string.IsNullOrEmpty(allItems[i].networkID))
                     {
-                        allItems[i].networkId = System.Guid.NewGuid().ToString();
+                        allItems[i].networkID = System.Guid.NewGuid().ToString();
                     }
                     if (allItems[i].transform.parent == null)
                     {
@@ -93,9 +87,10 @@ public class SessionManager : NetworkBehaviour
                 }
             }
             string itemsOnGroundJson = JsonMapper.ToJson(itemsOnGround);
-            
+
+
             character.InitializeServer(items, itemsId, equippedIds, serverRpcParams.Receive.SenderClientId);
-            character.InitializeClientRpc(itemsJson, itemsIdJson, equippedIdsJson, itemsOnGroundJson, serverRpcParams.Receive.SenderClientId);
+            character.InitializeClientRpc(itemsJson, itemsIdJson, equippedJson, itemsOnGroundJson, serverRpcParams.Receive.SenderClientId);
 
             foreach (var client in _characters)
             {
@@ -103,19 +98,22 @@ public class SessionManager : NetworkBehaviour
                 {
                     Character.Data data = client.Value.GetData();
                     string json = JsonMapper.ToJson(data);
-                    
+
                     ulong[] target = new ulong[1];
                     target[0] = serverRpcParams.Receive.SenderClientId;
                     ClientRpcParams clientRpcParams = default;
                     clientRpcParams.Send.TargetClientIds = target;
-                    
+
                     client.Value.InitializeClientRpc(json, client.Key, clientRpcParams);
                 }
             }
+
         }
     }
+
     public void StartClient()
     {
         NetworkManager.Singleton.StartClient();
     }
+
 }

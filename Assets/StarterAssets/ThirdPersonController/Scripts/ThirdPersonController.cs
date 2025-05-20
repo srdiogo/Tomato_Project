@@ -193,7 +193,29 @@ namespace StarterAssets
             
             CameraManager.singleton.aiming = _character.aiming;
             _character.aimTarget = CameraManager.singleton.aimTargetPoint;
-            
+
+            float maxPickupDistance = 3f;
+            Item itemToPick = null;
+            if (CameraManager.singleton.aimTargetObject != null && CameraManager.singleton.aimTargetObject.tag == "Item" && Vector3.Distance(CameraManager.singleton.aimTargetObject.position, transform.position) <= maxPickupDistance)
+            {
+                itemToPick = CameraManager.singleton.aimTargetObject.GetComponent<Item>();
+                if (itemToPick.canBePickedUp == false)
+                {
+                    itemToPick = null;
+                }
+            }
+            if (CanvasManager.singleton.itemToPick != itemToPick)
+            {
+                CanvasManager.singleton.itemToPick = itemToPick;
+            }
+            if (_input.pickupItem)
+            {
+                if (CanvasManager.singleton.itemToPick != null)
+                {
+                    _character.PickupItem(CanvasManager.singleton.itemToPick.networkID);
+                }
+                _input.pickupItem = false;
+            }
             Move();
             Rotate();
         }

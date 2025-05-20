@@ -1,14 +1,14 @@
-using System;
-using UnityEditor;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PrefabManager : MonoBehaviour
 {
-    [SerializeField] private Item[] _items = null;
-    [SerializeField] private Character[ ] _characters = null;
-    
-    private static PrefabManager _singleton;
 
+    [SerializeField] private Item[] _items = null;
+    [SerializeField] private Character[] _charactors = null;
+
+    private static PrefabManager _singleton = null;
     public static PrefabManager singleton
     {
         get
@@ -17,7 +17,6 @@ public class PrefabManager : MonoBehaviour
             {
                 _singleton = FindFirstObjectByType<PrefabManager>();
             }
-
             return _singleton;
         }
     }
@@ -36,19 +35,20 @@ public class PrefabManager : MonoBehaviour
         }
         return null;
     }
-    
+
     public Character GetCharacterPrefab(string id)
     {
-        if (_characters != null)
+        if (_charactors != null)
         {
-            for (int i = 0; i < _characters.Length; i++)
+            for (int i = 0; i < _charactors.Length; i++)
             {
-                if (_characters[i] != null && _characters[i].id == id)
+                if (_charactors[i] != null && _charactors[i].id == id)
                 {
-                    return _characters[i];
+                    return _charactors[i];
                 }
             }
         }
         return null;
     }
+
 }

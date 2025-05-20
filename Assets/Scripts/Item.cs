@@ -1,15 +1,18 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Item : MonoBehaviour
 {
+
     [Header("General")]
     [SerializeField] private string _id = ""; public string id { get { return _id; } }
-    private string _networkId = ""; public string networkId { get { return _networkId; } set { _networkId = value; } }
+    private string _networkId = ""; public string networkID { get { return _networkId; } set { _networkId = value; } }
 
     private Rigidbody _rigidbody = null;
     private Collider _collider = null;
 
-    private bool _caanBePickedUp = false; public bool caanBePickedUp { get { return _caanBePickedUp; } set { _caanBePickedUp = value; } }
+    private bool _canBePickedUp = false; public bool canBePickedUp { get { return _canBePickedUp; } set { _canBePickedUp = value; } }
     private bool _initialized = false;
 
     [System.Serializable]
@@ -21,11 +24,12 @@ public class Item : MonoBehaviour
         public float[] position;
         public float[] rotation;
     }
+
     public Data GetData()
     {
         Data data = new Data();
         data.id = id;
-        data.networkID = networkId;
+        data.networkID = networkID;
         if (this is Weapon)
         {
             data.value = ((Weapon)this).ammo;
@@ -34,15 +38,17 @@ public class Item : MonoBehaviour
         {
             data.value = ((Ammo)this).amount;
         }
+
         data.position = new float[3];
         data.position[0] = transform.position.x;
         data.position[1] = transform.position.y;
         data.position[2] = transform.position.z;
 
         data.rotation = new float[3];
-        data.rotation[0] = transform.rotation.x;
-        data.rotation[1] = transform.rotation.y;
-        data.rotation[2] = transform.rotation.z;
+        data.rotation[0] = transform.eulerAngles.x;
+        data.rotation[1] = transform.eulerAngles.y;
+        data.rotation[2] = transform.eulerAngles.z;
+
         return data;
     }
 
@@ -50,6 +56,7 @@ public class Item : MonoBehaviour
     {
         Initialize();
     }
+
     public virtual void Start()
     {
         if (transform.parent == null)
@@ -57,6 +64,7 @@ public class Item : MonoBehaviour
             SetOnGroundStatus(true);
         }
     }
+
     public void Initialize()
     {
         if (_initialized)
@@ -70,10 +78,12 @@ public class Item : MonoBehaviour
         _collider.isTrigger = false;
         _rigidbody.mass = 40f;
     }
+
     public void SetOnGroundStatus(bool status)
     {
         _rigidbody.isKinematic = !status;
         _collider.enabled = status;
-        _caanBePickedUp = status;
+        _canBePickedUp = status;
     }
+
 }

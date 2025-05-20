@@ -1,14 +1,16 @@
-using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Projectile : MonoBehaviour
 {
+
     [SerializeField] private float _speed = 20;
-    
+
     [Header("Prefabs")]
     [SerializeField] private Transform _defaultImpact = null;
 
-    private float _damage = 1;
+    private float _damage = 1f;
     private bool _initialized = false;
     private Character _shooter = null;
     private Rigidbody _rigidbody = null;
@@ -21,16 +23,22 @@ public class Projectile : MonoBehaviour
 
     private void Initialize()
     {
-        if (_initialized) return;
+        if (_initialized) { return; }
         _initialized = true;
+
         _rigidbody = GetComponent<Rigidbody>();
-        if(_rigidbody == null) _rigidbody = gameObject.AddComponent<Rigidbody>();
-        
+        if (_rigidbody == null)
+        {
+            _rigidbody = gameObject.AddComponent<Rigidbody>();
+        }
         _rigidbody.useGravity = false;
         _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-        
+
         _collider = gameObject.GetComponent<Collider>();
-        if(_collider == null) _collider = gameObject.AddComponent<SphereCollider>();
+        if (_collider == null)
+        {
+            _collider = gameObject.AddComponent<SphereCollider>();
+        }
         _collider.isTrigger = false;
         _collider.tag = "Projectile";
     }
@@ -50,9 +58,9 @@ public class Projectile : MonoBehaviour
         if ((_shooter != null && collision.transform.root == _shooter.transform.root) || collision.gameObject.tag == "Projectile")
         {
             Physics.IgnoreCollision(collision.collider, _collider);
-            return; 
+            return;
         }
-        
+
         Character character = collision.transform.root.GetComponent<Character>();
         if (character != null)
         {
@@ -60,7 +68,7 @@ public class Projectile : MonoBehaviour
         }
         else if (_defaultImpact != null)
         {
-            if (collision.gameObject.layer != LayerMask.NameToLayer("LocalPlayer") && collision.gameObject.layer != LayerMask.NameToLayer("NetworkPlayer"))
+            if(collision.gameObject.layer != LayerMask.NameToLayer("LocalPlayer") && collision.gameObject.layer != LayerMask.NameToLayer("NetworkPlayer"))
             {
                 Transform impact = Instantiate(_defaultImpact, collision.contacts[0].point, Quaternion.FromToRotation(Vector3.up, collision.contacts[0].normal));
                 Destroy(impact.gameObject, 30f);
@@ -68,4 +76,5 @@ public class Projectile : MonoBehaviour
         }
         Destroy(gameObject);
     }
+
 }
