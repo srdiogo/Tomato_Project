@@ -3687,13 +3687,6 @@ MonoBehaviour:
   JumpHeight: 1.2
   Gravity: -15
   JumpTimeout: 0.3
-  FallTimeout: 0.15
-  Grounded: 1
-  GroundedOffset: -0.14
-  GroundedRadius: 0.28
-  GroundLayers:
-    serializedVersion: 2
-    m_Bits: 1
   CinemachineCameraTarget: {fileID: 8093912883557136917}
   TopClamp: 70
   BottomClamp: -30
@@ -3934,9 +3927,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  isLocalPlayer: 1
   _id: Bot
   _weaponHolder: {fileID: 2445494857405779173}
+  FallTimeout: 0.15
+  GroundedOffset: -0.14
+  GroundedRadius: 0.28
+  GroundLayers:
+    serializedVersion: 2
+    m_Bits: 1
   _ragdollRigidbodies: []
   _ragdollColliders: []
 --- !u!114 &4178382813660253782

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
 using LitJson;
+using TMPro;
 using Unity.Networking.Transport;
 
 public class SessionManager : NetworkBehaviour
@@ -20,9 +21,12 @@ public class SessionManager : NetworkBehaviour
             return _singleton;
         }
     }
+    
+    private Dictionary<ulong, Character> _characters = new Dictionary<ulong, Character>();
     public void StartServer()
     {
         NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+        NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
         NetworkManager.Singleton.StartServer();
     }
 
@@ -32,6 +36,11 @@ public class SessionManager : NetworkBehaviour
         target[0] = clientId;
         ClientRpcParams clientRpcParams = default;
         OnClientConnectedClientRpc(clientRpcParams);
+    }
+
+    private void OnClientDisconnected(ulong clientId)
+    {
+     _characters.Remove(clientId);   
     }
     
     [ClientRpc]
@@ -52,9 +61,12 @@ public class SessionManager : NetworkBehaviour
             
             Character character = Instantiate(prefab, position, Quaternion.identity);
             character.GetComponent<NetworkObject>().SpawnWithOwnership(serverRpcParams.Receive.SenderClientId);
+            
+            _characters.Add(serverRpcParams.Receive.SenderClientId, character);
 
             Dictionary<string, int> items = new Dictionary<string, int> { { "AKM", 1 }, { "AWP", 1 }, { "h", 1000 } };
             List<string> itemsId = new List<string>();
+            List<string> equippedIds = new List<string>();
             for (int i = 0; i < items.Count ; i++)
             {
                 itemsId.Add(System.Guid.NewGuid().ToString());
@@ -62,9 +74,26 @@ public class SessionManager : NetworkBehaviour
             
             string itemsJson = JsonMapper.ToJson(items);
             string itemsIdJson = JsonMapper.ToJson(itemsId);
+            string equippedIdsJson = JsonMapper.ToJson(equippedIds);
             
-            character.InitializeServer(items, itemsId, serverRpcParams.Receive.SenderClientId);
-            character.InitializeClientRpc(itemsJson, itemsIdJson, serverRpcParams.Receive.SenderClientId);
+            character.InitializeServer(items, itemsId, equippedIds, serverRpcParams.Receive.SenderClientId);
+            character.InitializeClientRpc(itemsJson, itemsIdJson, equippedIdsJson, serverRpcParams.Receive.SenderClientId);
+
+            foreach (var client in _characters)
+            {
+                if (client.Value != null && client.Value != character)
+                {
+                    Character.Data data = client.Value.GetData();
+                    string json = JsonMapper.ToJson(data);
+                    
+                    ulong[] target = new ulong[1];
+                    target[0] = serverRpcParams.Receive.SenderClientId;
+                    ClientRpcParams clientRpcParams = default;
+                    clientRpcParams.Send.TargetClientIds = target;
+                    
+                    client.Value.InitializeClientRpc(json, client.Key, clientRpcParams);
+                }
+            }
         }
     }
     public void StartClient()
