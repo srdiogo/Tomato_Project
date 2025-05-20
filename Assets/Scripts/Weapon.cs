@@ -31,9 +31,10 @@ public class Weapon : Item
     private float _fireTimer = 0f;
     private int _ammo = 0; public int ammo { get { return _ammo; } set { _ammo = value;  } }
 
-    private void Awake()
+    public override void Awake()
     {
-        _fireTimer = Time.realtimeSinceStartup;
+        base.Awake();
+        _fireTimer += Time.realtimeSinceStartup;
     }
 
     public bool Shoot(Character character, Vector3 target)

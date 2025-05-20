@@ -4,5 +4,76 @@ public class Item : MonoBehaviour
 {
     [Header("General")]
     [SerializeField] private string _id = ""; public string id { get { return _id; } }
-    private string _networkId = ""; public string networkId { get { return _networkId; }  set { _networkId = value; } }
+    private string _networkId = ""; public string networkId { get { return _networkId; } set { _networkId = value; } }
+
+    private Rigidbody _rigidbody = null;
+    private Collider _collider = null;
+
+    private bool _caanBePickedUp = false; public bool caanBePickedUp { get { return _caanBePickedUp; } set { _caanBePickedUp = value; } }
+    private bool _initialized = false;
+
+    [System.Serializable]
+    public struct Data
+    {
+        public string id;
+        public string networkID;
+        public int value;
+        public float[] position;
+        public float[] rotation;
+    }
+    public Data GetData()
+    {
+        Data data = new Data();
+        data.id = id;
+        data.networkID = networkId;
+        if (this is Weapon)
+        {
+            data.value = ((Weapon)this).ammo;
+        }
+        else if (this is Ammo)
+        {
+            data.value = ((Ammo)this).amount;
+        }
+        data.position = new float[3];
+        data.position[0] = transform.position.x;
+        data.position[1] = transform.position.y;
+        data.position[2] = transform.position.z;
+
+        data.rotation = new float[3];
+        data.rotation[0] = transform.rotation.x;
+        data.rotation[1] = transform.rotation.y;
+        data.rotation[2] = transform.rotation.z;
+        return data;
+    }
+
+    public virtual void Awake()
+    {
+        Initialize();
+    }
+    public virtual void Start()
+    {
+        if (transform.parent == null)
+        {
+            SetOnGroundStatus(true);
+        }
+    }
+    public void Initialize()
+    {
+        if (_initialized)
+        {
+            return;
+        }
+        _initialized = true;
+        gameObject.tag = "Item";
+        _rigidbody = GetComponent<Rigidbody>();
+        _collider = GetComponent<Collider>();
+        _collider.isTrigger = false;
+        _rigidbody.mass = 40f;
+    }
+    public void SetOnGroundStatus(bool status)
+    {
+        _rigidbody.isKinematic = !status;
+        _collider.enabled = status;
+        _caanBePickedUp = status;
+    }
 }
