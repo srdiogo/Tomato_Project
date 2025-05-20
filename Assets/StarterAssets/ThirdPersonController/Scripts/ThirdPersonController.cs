@@ -113,14 +113,9 @@ namespace StarterAssets
 
         private bool _hasAnimator;
         private float targetSpeed = 2f;
-        private bool _walking = false;
-        private float _speedAnimationMultiplier = 0f;
-        private bool _aiming = false;
-        private bool _sprinting = false;
-        private float _aimLayerWeight = 0;
-        private Vector2 _aimingMovingAnimationsInput = Vector2.zero;
-        private float aimRigWeight = 0;
-        private float leftHandRigWeight = 0;
+        
+        
+
         
 
         private bool IsCurrentDeviceMouse
@@ -170,67 +165,53 @@ namespace StarterAssets
         private void Update()
         {
             bool armed = _character.weapon != null;
-            _aiming = _input.aim;
-            _sprinting = _input.sprint && _aiming == false;
+            _character.aiming = _input.aim;
+            _character.sprinting = _input.sprint && _character.aiming == false;
             _hasAnimator = TryGetComponent(out _animator);
 
             JumpAndGravity();
             GroundedCheck();
-
-            CameraManager.singleton.aiming = _aiming;
-            _animator.SetFloat("Armed", armed ? 1 : 0);
-            _animator.SetFloat("Aimed", _aiming ? 1 : 0);
             
-            _aimLayerWeight = Mathf.Lerp(_aimLayerWeight, _character.switchingWeapon || (armed && (_aiming || _character.reloading)) ? 1 : 0, 10f * Time.deltaTime);
-            _animator.SetLayerWeight(1, _aimLayerWeight);
-            
-            aimRigWeight = Mathf.Lerp(aimRigWeight, armed && _aiming && !_character.reloading ? 1 : 0, 10f * Time.deltaTime);
-            leftHandRigWeight = Mathf.Lerp(leftHandRigWeight, armed && _character.switchingWeapon == false && !_character.reloading && (_aiming || (_controller.isGrounded && _character.weapon.type == Weapon.Handle.TwoHanded))  ? 1 : 0, 10f * Time.deltaTime);
-
-            _rigManager.aimTarget = CameraManager.singleton.aimTargetPoint;
-            _rigManager.aimWeight = aimRigWeight;
-            _rigManager.leftHandWeight = leftHandRigWeight;
             if (_input.walk)
             {   
                 _input.walk = false;
-                _walking = !_walking;
-                    
+                _character.walking = !_character.walking;
             }
-            targetSpeed = RunSpeed;
-            if(_sprinting)
+            
+            if(_character.sprinting)
             {
                 targetSpeed = SprintSpeed;
-                _speedAnimationMultiplier = 3;
             }
-            else if (_walking)
+            else if (_character.walking)
             {
                 targetSpeed = WalkSpeed;
-                _speedAnimationMultiplier = 1;
             }
             else
             {
-                _speedAnimationMultiplier = 2;
+                targetSpeed = RunSpeed;
             }
             
-            _aimingMovingAnimationsInput = Vector2.Lerp(_aimingMovingAnimationsInput, _input.move.normalized * _speedAnimationMultiplier, SpeedChangeRate * Time.deltaTime);
-            _animator.SetFloat("Speed_X", _aimingMovingAnimationsInput.x);
-            _animator.SetFloat("Speed_Y", _aimingMovingAnimationsInput.y);
-
-            if (_input.shoot && armed && !_character.reloading && _aiming && _character.weapon.Shoot(_character, CameraManager.singleton.aimTargetPoint))
+            if (_input.shoot && armed && !_character.reloading && _character.aiming &&
+                _character.weapon.Shoot(_character, CameraManager.singleton.aimTargetPoint))
             {
                 _rigManager.ApplyWeaponKick(_character.weapon.handKick, _character.weapon.bodyKick);
             }
-
+            
             if (_input.reload && !_character.reloading)
             {
                 _input.reload = false;
                 _character.Reload();
             }
-
+            
             if (_input.switchWeapon != 0)
             {
                 _character.ChangeWeapon(_input.switchWeapon);
             }
+            
+            _character.isGrounded = _controller.isGrounded;
+            CameraManager.singleton.aiming = _character.aiming;
+            _character.aimTarget = CameraManager.singleton.aimTargetPoint;
+            
             Move();
             Rotate();
         }
@@ -239,7 +220,7 @@ namespace StarterAssets
         
         private void  Rotate()
         {
-            if (_aiming)
+            if (_character.aiming)
             {
                 Vector3 aimTarget = CameraManager.singleton.aimTargetPoint;
                 aimTarget.y = transform.position.y;
@@ -331,7 +312,7 @@ namespace StarterAssets
                 _speed = targetSpeed;
             }
 
-            _animationBlend = Mathf.Lerp(_animationBlend, _input.move == Vector2.zero ? 0 : _speedAnimationMultiplier, Time.deltaTime * SpeedChangeRate);
+            _animationBlend = Mathf.Lerp(_animationBlend, _input.move == Vector2.zero ? 0 : _character.speedAnimationMultiplier, Time.deltaTime * SpeedChangeRate);
             if (_animationBlend < 0.01f) _animationBlend = 0f;
 
             // normalise input direction
@@ -347,7 +328,7 @@ namespace StarterAssets
                     RotationSmoothTime);
 
                 // rotate to face input direction relative to camera position
-                if (_aiming == false)
+                if (_character.aiming == false)
                 {
                     transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
                 }

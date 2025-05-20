@@ -55,7 +55,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1933f94bd1918d44e914cb487de83c37, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _speed: 20
+  _speed: 700
   _defaultImpact: {fileID: 3507790160055854355, guid: 7bb208bdbe0f9664cb848164daf090b4, type: 3}
 --- !u!23 &4329681546366727668
 MeshRenderer:
