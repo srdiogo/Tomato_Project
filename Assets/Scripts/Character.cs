@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using LitJson;
 using StarterAssets;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 
-public class Character : MonoBehaviour
+public class Character : NetworkBehaviour
 {
     public bool isLocalPlayer = false;
     [SerializeField] private string _id = ""; public string id { get { return _id; } }
@@ -34,8 +36,10 @@ public class Character : MonoBehaviour
     private float aimRigWeight = 0;
     private float leftHandRigWeight = 0;
     private Vector3 _aimTarget = Vector3.zero; public Vector3 aimTarget { get { return _aimTarget; } set { _aimTarget = value; } }
-
     private Vector3 _lastPosition = Vector3.zero;
+
+    private ulong _clientID = 0;
+    private bool _initialized = false;
     private void Awake()
     {
         _ragdollRigidbodies = GetComponentsInChildren<Rigidbody>();
@@ -58,11 +62,30 @@ public class Character : MonoBehaviour
         SetRagdollStatus(false);
         _animator = GetComponent<Animator>();
         _rigManager = GetComponent<RigManager>();
-        Initialize(new Dictionary<string, int> { {"AWP", 1}, {"AKM", 1}, {"h", 1000} });
+        //Initialize(new Dictionary<string, int> { {"AWP", 1}, {"AKM", 1}, {"h", 1000} });
     }
 
-    private void Start()
+    public void InitializeServer(Dictionary<string, int> items, List<string> itemsId, ulong clientID)
     {
+        if (_initialized)
+        {
+            return;
+        }
+        _initialized = true;
+        _clientID = clientID;
+        _Initialize(items, itemsId);
+    }
+    
+    [ClientRpc]
+    public void InitializeClientRpc(string itemsJson, string itemsIdJson, ulong clientID)
+    {
+        if (_initialized)
+        {
+            return;
+        }
+        _initialized = true;
+        _clientID = clientID;
+        
         if (isLocalPlayer)
         {
             SetLayer( transform, LayerMask.NameToLayer("LocalPlayer"));
@@ -70,7 +93,12 @@ public class Character : MonoBehaviour
         else
         {
             SetLayer( transform, LayerMask.NameToLayer("NetworkPlayer"));
-
+        }
+        Dictionary<string, int> items = JsonMapper.ToObject<Dictionary<string, int>>(itemsJson);
+        List<string> itemsId = JsonMapper.ToObject<List<string>>(itemsIdJson);
+        if (items != null && itemsId != null)
+        {
+            _Initialize(items, itemsId);
         }
     }
 
@@ -126,47 +154,39 @@ public class Character : MonoBehaviour
         }
     }
 
-    public void Initialize(Dictionary<string, int> items)
+    private void _Initialize(Dictionary<string, int> items, List<string> itemsId)
     {
         if (items != null && PrefabManager.singleton != null)
         {
+            int i = 0;
             int firstWeaponIndex = -1;
             foreach (var itemData in items)
             {
                 Item prefab = PrefabManager.singleton.GetItemPrefab(itemData.Key);
                 if (prefab != null && itemData.Value > 0)
                 {
-                    for (int i = 1; i <= itemData.Value; i++)
+                    Item item = Instantiate(prefab, transform);
+                    item.networkId = itemsId[i];
+                    if (item.GetType() == typeof(Weapon))
                     {
-                        bool done = false;
-                        Item item = Instantiate(prefab, transform);
-
-                        if (item.GetType() == typeof(Weapon))
+                        Weapon w = (Weapon)item;
+                        item.transform.SetParent(_weaponHolder);
+                        item.transform.localPosition = w.rightHandPosition;
+                        item.transform.localEulerAngles = w.rightHandRotation;
+                        if (firstWeaponIndex < 0)
                         {
-                            Weapon w = (Weapon)item;
-                            item.transform.SetParent(_weaponHolder);
-                            item.transform.localPosition = w.rightHandPosition;
-                            item.transform.localEulerAngles = w.rightHandRotation;
-                            if (firstWeaponIndex < 0)
-                            {
-                                firstWeaponIndex = _items.Count;
-                            }
-                        }
-                        else if (item.GetType() == typeof(Ammo))
-                        {
-                            Ammo a = (Ammo)item;
-                            a.amount += itemData.Value;
-                        }
-                            done = true;
-                        
-                        item.gameObject.SetActive(false);
-                        _items.Add(item);
-                        if (done)
-                        {
-                            break;
+                            firstWeaponIndex = _items.Count;
                         }
                     }
-                } 
+                    else if (item.GetType() == typeof(Ammo))
+                    {
+                        Ammo a = (Ammo)item;
+                        a.amount += itemData.Value;
+                    }
+                    item.gameObject.SetActive(false);
+                    _items.Add(item);
+                }
+                i++;
             }
 
             if (firstWeaponIndex >= 0 && _weapon == null)
