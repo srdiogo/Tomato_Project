@@ -3,7 +3,6 @@ using StarterAssets;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 
@@ -64,9 +63,8 @@ public class Character : NetworkBehaviour
     private Vector2 _aimedMoveSpeed = Vector2.zero;
     private Vector2 _lastAimedMoveSpeed = Vector2.zero;
     private bool _lastAiming = false;
-    
-    public static Character localPlayer = null;
 
+    public static Character localPlayer = null;
 
     [System.Serializable] public struct Data
     {
@@ -90,26 +88,36 @@ public class Character : NetworkBehaviour
                 continue;
             }
 
-            int value = 0;
-            if (_items[i].GetType() == typeof(Weapon))
-            {
-                value = ((Weapon)_items[i]).ammo;
-            }
-            else if (_items[i].GetType() == typeof(Ammo))
-            {
-                value = ((Ammo)_items[i]).amount;
-            }
+            int value = _items[i].GetAmount();
 
             data.items.Add(i.ToString(), (_items[i].id, value));
             data.itemsId.Add(_items[i].networkID);
 
-            if (_weapon != null && _items[i] == _weapon)
+            if (_weaponToEquip != null)
             {
-                data.equippedIds.Add(_items[i].networkID);
+                if (_items[i] == _weaponToEquip)
+                {
+                    data.equippedIds.Add(_weaponToEquip.networkID);
+                    for (int j = 0; j < _items.Count; j++)
+                    {
+                        if (_items[i] != null && _items[i].GetType() == typeof(Ammo) && _weaponToEquip.ammoID == _items[i].id)
+                        {
+                            data.equippedIds.Add(_items[i].networkID);
+                            break;
+                        }
+                    }
+                }
             }
-            else if (_ammo != null && _items[i] == _ammo)
+            else
             {
-                data.equippedIds.Add(_items[i].networkID);
+                if (_weapon != null && _items[i] == _weapon)
+                {
+                    data.equippedIds.Add(_items[i].networkID);
+                }
+                else if (_ammo != null && _items[i] == _ammo)
+                {
+                    data.equippedIds.Add(_items[i].networkID);
+                }
             }
         }
         return data;
@@ -219,14 +227,7 @@ public class Character : NetworkBehaviour
                     itemsOnGroundInScene[i].networkID = itemsOnGround[j].networkID;
                     itemsOnGroundInScene[i].transform.position = new Vector3(itemsOnGround[j].position[0], itemsOnGround[j].position[1], itemsOnGround[j].position[2]);
                     itemsOnGroundInScene[i].transform.eulerAngles = new Vector3(itemsOnGround[j].rotation[0], itemsOnGround[j].rotation[1], itemsOnGround[j].rotation[2]);
-                    if (itemsOnGroundInScene[i].GetType() == typeof(Weapon))
-                    {
-                        ((Weapon)itemsOnGroundInScene[i]).ammo = itemsOnGround[j].value;
-                    }
-                    else if (itemsOnGroundInScene[i].GetType() == typeof(Ammo))
-                    {
-                        ((Ammo)itemsOnGroundInScene[i]).amount = itemsOnGround[j].value;
-                    }
+                    itemsOnGroundInScene[i].SetAmount(itemsOnGround[j].value);
                     itemsOnGroundInScene[i].SetOnGroundStatus(true);
                     itemsOnGround.RemoveAt(j);
                     matched = true;
@@ -247,14 +248,7 @@ public class Character : NetworkBehaviour
                 item.networkID = itemsOnGround[i].networkID;
                 item.Initialize();
                 item.SetOnGroundStatus(true);
-                if (item.GetType() == typeof(Weapon))
-                {
-                    ((Weapon)item).ammo = itemsOnGround[i].value;
-                }
-                else if (item.GetType() == typeof(Ammo))
-                {
-                    ((Ammo)item).amount = itemsOnGround[i].value;
-                }
+                item.SetAmount(itemsOnGround[i].value);
                 item.transform.position = new Vector3(itemsOnGround[i].position[0], itemsOnGround[i].position[1], itemsOnGround[i].position[2]);
                 item.transform.eulerAngles = new Vector3(itemsOnGround[i].rotation[0], itemsOnGround[i].rotation[1], itemsOnGround[i].rotation[2]);
             }
@@ -295,6 +289,7 @@ public class Character : NetworkBehaviour
         {
             return;
         }
+
         bool armed = _weapon != null;
         GroundedCheck();
         FreeFall();
@@ -349,7 +344,7 @@ public class Character : NetworkBehaviour
             Vector3 deltaPosition = transform.InverseTransformDirection(transform.position - _lastPosition).normalized;
             _aimedMoveSpeed = new Vector2(deltaPosition.x, deltaPosition.z) * _speedAnimationMultiplier;
         }
-            
+
 
         _aimedMovingAnimationsInput = Vector2.Lerp(_aimedMovingAnimationsInput, _aimedMoveSpeed, 10f * Time.deltaTime);
         _animator.SetFloat("Speed_X", _aimedMovingAnimationsInput.x);
@@ -469,7 +464,7 @@ public class Character : NetworkBehaviour
             }
         }
     }
-    
+
     private void _Initialize(Dictionary<string, (string, int)> items, List<string> itemsId, List<string> equippedIds)
     {
         InitializeComponents();
@@ -487,13 +482,13 @@ public class Character : NetworkBehaviour
                     item.Initialize();
                     item.SetOnGroundStatus(false);
                     item.networkID = itemsId[i];
+                    item.SetAmount(itemData.Value.Item2);
                     if (item.GetType() == typeof(Weapon))
                     {
                         Weapon w = (Weapon)item;
                         item.transform.SetParent(_weaponHolder);
                         item.transform.localPosition = w.rightHandPosition;
                         item.transform.localEulerAngles = w.rightHandRotation;
-                        w.ammo = itemData.Value.Item2;
                         if (equippedIds.Contains(item.networkID) || equippedWeaponIndex < 0)
                         {
                             equippedWeaponIndex = i;
@@ -502,7 +497,6 @@ public class Character : NetworkBehaviour
                     else if (item.GetType() == typeof(Ammo))
                     {
                         Ammo a = (Ammo)item;
-                        a.amount = itemData.Value.Item2;
                         if (equippedIds.Contains(item.networkID))
                         {
                             equippedAmmoIndex = i;
@@ -514,7 +508,6 @@ public class Character : NetworkBehaviour
                     i++;
                 }
             }
-
             if (_health > 0)
             {
                 if (equippedWeaponIndex >= 0 && _weapon == null)
@@ -537,7 +530,6 @@ public class Character : NetworkBehaviour
                     _ammo.amount -= amount;
                     _weapon.ammo += amount;
                 }
-                
             }
         }
     }
@@ -683,7 +675,7 @@ public class Character : NetworkBehaviour
 
     private void _EquipWeapon()
     {
-        if(_weaponToEquip != null)
+        if (_weaponToEquip != null)
         {
             _weapon = _weaponToEquip;
             _weaponToEquip = null;
@@ -804,7 +796,7 @@ public class Character : NetworkBehaviour
                 damage *= 3f;
             }
             _health -= damage;
-            if (health <= 0)
+            if (_health <= 0)
             {
                 _networkObject.DontDestroyWithOwner = true;
             }
@@ -814,13 +806,13 @@ public class Character : NetworkBehaviour
     }
 
     [ClientRpc]
-    public void ApplyDamageClientRpc(ulong shoot, ulong target, float damage, float remainedHealth)
+    private void ApplyDamageClientRpc(ulong shooter, ulong target, float damage, float remainedHealth)
     {
         _health = remainedHealth;
         HealthCheck();
     }
-    
-    public void HealthCheck()
+
+    private void HealthCheck()
     {
         if (_health <= 0)
         {
@@ -846,7 +838,7 @@ public class Character : NetworkBehaviour
                 _weapon.transform.SetParent(null, true);
                 _weapon.SetOnGroundStatus(true);
             }
-            
+
             ClientNetworkTransform networkTransform = GetComponent<ClientNetworkTransform>();
             if (networkTransform != null)
             {
@@ -856,8 +848,6 @@ public class Character : NetworkBehaviour
                 networkTransform.SyncRotAngleX = false;
                 networkTransform.SyncRotAngleY = false;
                 networkTransform.SyncRotAngleZ = false;
-
-                
             }
         }
     }
@@ -1071,7 +1061,7 @@ public class Character : NetworkBehaviour
         }
         if (success)
         {
-            PickupItemClientRpc(networkID, true ,merge != null? merge.networkID : "");
+            PickupItemClientRpc(networkID, true, merge != null ? merge.networkID : "");
         }
         else
         {
@@ -1079,7 +1069,7 @@ public class Character : NetworkBehaviour
             target[0] = serverRpcParams.Receive.SenderClientId;
             ClientRpcParams clientRpcParams = default;
             clientRpcParams.Send.TargetClientIds = target;
-            PickupItemClientRpc(networkID, false,"", clientRpcParams);
+            PickupItemClientRpc(networkID, false, "", clientRpcParams);
         }
     }
 
@@ -1102,7 +1092,7 @@ public class Character : NetworkBehaviour
                         {
                             for (int j = 0; j < _items.Count; j++)
                             {
-                                if(_items[j].networkID == mergeNetworkID)
+                                if (_items[j].networkID == mergeNetworkID)
                                 {
                                     merge = _items[j];
                                     break;
@@ -1133,15 +1123,12 @@ public class Character : NetworkBehaviour
         {
             if (merge.GetType() == item.GetType())
             {
-                if (item.GetType() == typeof(Ammo))
-                {
-                    ((Ammo)merge).amount += ((Ammo)item).amount;
-                }
+                merge.AddAmount(item.GetAmount());
                 Destroy(item.gameObject);
             }
             else
             {
-                //problem
+                // Problem
             }
         }
         else
@@ -1158,29 +1145,26 @@ public class Character : NetworkBehaviour
             }
             else if (item.GetType() == typeof(Ammo))
             {
-                if(_ammo == null && _weapon != null && _weapon.ammoID == ((Ammo)item).id)
+                if (_ammo == null && _weapon != null && _weapon.ammoID == ((Ammo)item).id)
                 {
                     _EquipAmmo((Ammo)item);
                 }
             }
+            item.gameObject.SetActive(false);
+            _items.Add(item);
         }
-
-        item.gameObject.SetActive(false);
-        _items.Add(item);
     }
 
     public void RemoveItemFromInventoryLocally(Item item)
     {
-        if (item != null || _items.Contains(item) == false)
+        if (item == null || _items.Contains(item) == false)
         {
             return;
         }
-
         if (item == _weapon)
         {
             _weapon = null;
         }
-
         if (item == _ammo)
         {
             _ammo = null;
@@ -1227,13 +1211,11 @@ public class Character : NetworkBehaviour
             {
                 continue;
             }
-
             if (item.Key != null && _items.Contains(item.Key))
             {
                 serializableItems.Add(item.Key.networkID, item.Value);
             }
         }
-
         if (serializableItems.Count > 0)
         {
             string itemsJson = JsonMapper.ToJson(serializableItems);
@@ -1242,12 +1224,11 @@ public class Character : NetworkBehaviour
     }
 
     [ServerRpc]
-    public void DropItemsServerRpc(string itemsJson, ServerRpcParams serverRpcParams = default)
+    private void DropItemsServerRpc(string itemsJson, ServerRpcParams serverRpcParams = default)
     {
         Dictionary<string, int> items = JsonMapper.ToObject<Dictionary<string, int>>(itemsJson);
         Dictionary<string, int> droppedItems = new Dictionary<string, int>();
-        Dictionary<string, (string,int)> splitItems = new Dictionary<string, (string,int)>();
-
+        Dictionary<string, (string, int)> splitItems = new Dictionary<string, (string, int)>();
         foreach (var item in items)
         {
             for (int i = 0; i < _items.Count; i++)
@@ -1256,32 +1237,29 @@ public class Character : NetworkBehaviour
                 {
                     int count = item.Value;
                     int remained = 0;
-                    if (_items[i].GetType() == typeof(Ammo))
-                    {
-                        Ammo ammo = (Ammo)_items[i];
-                        if (count <= 0)
-                        {
-                            break;
-                        }
-                        else if (ammo.amount < count)
-                        {
-                            count = ammo.amount;
-                        }
-                        else if (ammo.amount > count)
-                        {
-                            remained = ammo.amount - count;
-                            ammo.amount = count;
-                        }
-                    }
-                    else if (_items[i].GetType() == typeof(Weapon))
+                    int c = 0;
+                    if (_items[i].GetType() == typeof(Weapon))
                     {
                         count = ((Weapon)_items[i]).ammo;
                     }
                     else
                     {
-                        count = 1;
+                        c = _items[i].GetAmount();
+                        if (count <= 0)
+                        {
+                            break;
+                        }
+                        else if (c < count)
+                        {
+                            count = c;
+                        }
+                        else if (c > count)
+                        {
+                            remained = c - count;
+                            c = count;
+                            _items[i].SetAmount(c);
+                        }
                     }
-
                     if (remained > 0)
                     {
                         Item prefab = PrefabManager.singleton.GetItemPrefab(_items[i].id);
@@ -1289,10 +1267,7 @@ public class Character : NetworkBehaviour
                         {
                             Item splitItem = Instantiate(prefab, transform);
                             splitItem.networkID = System.Guid.NewGuid().ToString();
-                            if (splitItem.GetType() == typeof(Ammo))
-                            {
-                                ((Ammo)splitItem).amount = remained;
-                            }
+                            splitItem.SetAmount(remained);
                             AddItemToInventoryLocally(splitItem);
                             splitItems.Add(splitItem.networkID, (_items[i].id, remained));
                         }
@@ -1301,13 +1276,12 @@ public class Character : NetworkBehaviour
                             break;
                         }
                     }
-                    _Dropitem(_items[i]);
+                    _DropItem(_items[i]);
                     droppedItems.Add(item.Key, count);
                     break;
                 }
             }
         }
-
         if (droppedItems.Count > 0)
         {
             string droppedItemsJson = JsonMapper.ToJson(droppedItems);
@@ -1317,10 +1291,10 @@ public class Character : NetworkBehaviour
     }
 
     [ClientRpc]
-    public void DropItemsClientRpc(string droppedItemsJson, string splitItemsJson, ClientRpcParams serverRpcParams = default)
+    private void DropItemsClientRpc(string droppedItemsJson, string splitItemsJson, ClientRpcParams serverRpcParams = default)
     {
         Dictionary<string, int> items = JsonMapper.ToObject<Dictionary<string, int>>(droppedItemsJson);
-        Dictionary<string, (string,int)> splitItems = JsonMapper.ToObject<Dictionary<string, (string,int)>>(splitItemsJson);
+        Dictionary<string, (string, int)> splitItems = JsonMapper.ToObject<Dictionary<string, (string, int)>>(splitItemsJson);
         foreach (var item in items)
         {
             bool found = false;
@@ -1328,23 +1302,15 @@ public class Character : NetworkBehaviour
             {
                 if (_items[i].networkID == item.Key)
                 {
-                    if (_items[i].GetType() == typeof(Ammo))
-                    {
-                        ((Ammo)_items[i]).amount = item.Value;
-                    }
-                    else if (_items[i].GetType() == typeof(Weapon))
-                    {
-                        ((Weapon)_items[i]).ammo = item.Value;
-                    }
-                    _Dropitem(_items[i]);
+                    _items[i].SetAmount(item.Value);
+                    _DropItem(_items[i]);
                     found = true;
                     break;
                 }
             }
-
             if (found == false)
             {
-                //problem
+                // Problem
             }
         }
         foreach (var item in splitItems)
@@ -1354,34 +1320,29 @@ public class Character : NetworkBehaviour
             {
                 Item splitItem = Instantiate(prefab, transform);
                 splitItem.networkID = item.Key;
-                if (item.Key.GetType() == typeof(Ammo))
-                {
-                    ((Ammo)splitItem).amount = item.Value.Item2;
-                }
+                splitItem.SetAmount(item.Value.Item2);
                 AddItemToInventoryLocally(splitItem);
             }
         }
     }
 
-    private void _Dropitem(Item item)
+    private void _DropItem(Item item)
     {
         if (_items.Contains(item) == false)
         {
             return;
         }
-
         if (item == _weapon)
         {
             _weapon = null;
         }
-
         if (item == _ammo)
         {
             _ammo = null;
         }
         item.transform.SetParent(null);
         item.SetOnGroundStatus(true);
-        Vector3 offset = new Vector3(Random.Range(-1.0f, 1.0f),0, Random.Range(-1.0f, 1.0f));
+        Vector3 offset = new Vector3(UnityEngine.Random.Range(-0.1f, 0.1f), 0, UnityEngine.Random.Range(-0.1f, 0.1f));
         item.transform.position = transform.position + transform.forward.normalized + Vector3.up + offset;
         item.transform.rotation = Quaternion.identity;
         item.gameObject.SetActive(true);

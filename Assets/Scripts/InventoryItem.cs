@@ -1,15 +1,16 @@
-using System;
+using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class InventoryItem : MonoBehaviour
 {
+
     [SerializeField] public TextMeshProUGUI _itemName = null;
     [SerializeField] public TextMeshProUGUI _itemAmount = null;
-    
-    private Item _item; public Item item { get { return _item; } set { _item = value; } }
 
+    private Item _item = null; public Item item { get { return _item; } }
     private int _count = 1; public int count { get { return _count; } set { _count = value; } }
 
     private void Start()
@@ -26,18 +27,9 @@ public class InventoryItem : MonoBehaviour
         if (item != null)
         {
             _item = item;
-            _itemName.text = item.id;
-            _count = 1;
-            if (item.GetType() == typeof(Weapon))
-            {
-                _itemAmount.text = "x" + ((Weapon)item).ammo.ToString();
-                _count = ((Weapon)item).ammo;
-            }
-            else if (item.GetType() == typeof(Ammo))
-            {
-                _itemAmount.text = "x" + ((Ammo)item).amount.ToString();
-                _count = ((Ammo)item).amount;
-            }
+            _itemName.text = _item.id;
+            _count = item.GetAmount();
+            _itemAmount.text = "x" + _count.ToString();
         }
     }
 
@@ -45,4 +37,5 @@ public class InventoryItem : MonoBehaviour
     {
         CanvasManager.singleton.ItemClicked(this);
     }
+
 }

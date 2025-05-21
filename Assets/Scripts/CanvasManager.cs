@@ -1,8 +1,8 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using UnityEditor;
 
 public class CanvasManager : MonoBehaviour
 {
@@ -19,7 +19,7 @@ public class CanvasManager : MonoBehaviour
     [SerializeField] public float _leftOffset = 5f;
     [SerializeField] public float _topOffset = 5f;
     [SerializeField] public float _buttomOffset = 5f;
-    
+
     [Header("Loot Box")]
     [SerializeField] public GameObject _itemLootPanel = null;
     [SerializeField] public RectTransform _itemLootBox = null;
@@ -27,18 +27,16 @@ public class CanvasManager : MonoBehaviour
     [SerializeField] public float _itemLootRightOffset = 5f;
     [SerializeField] public float _itemLootLeftOffset = 5f;
     [SerializeField] public float _itemLootTopOffset = 5f;
-    [SerializeField] public float _itemLootBottomOffset = 5f;
-    
+    [SerializeField] public float _itemLootButtomOffset = 5f;
+
     [Header("Inventory")]
     [SerializeField] public GameObject _inventoryPanel = null;
     [SerializeField] private Button _inventoryCloseButton = null;
-    [SerializeField] public InventoryItem _InventoryItemPrefab = null;
+    [SerializeField] public InventoryItem _inventoryItemPrefab = null;
     [SerializeField] public RectTransform _inventoryGrid1 = null;
     [SerializeField] public RectTransform _inventoryGrid2 = null;
     [SerializeField] public TextMeshProUGUI _inventoryGridTitle1 = null;
     [SerializeField] public TextMeshProUGUI _inventoryGridTitle2 = null;
-
-    
 
     private static CanvasManager _singleton = null;
     public static CanvasManager singleton
@@ -56,14 +54,15 @@ public class CanvasManager : MonoBehaviour
     private Item _itemToPick = null; public Item itemToPick { get { return _itemToPick; } set { _itemToPick = value; OnItemToPickUpdated(); } }
     private Character _characterToLoot = null; public Character characterToLoot { get { return _characterToLoot; } set { _characterToLoot = value; OnCharacterToLootUpdated(); } }
     private Character _characterLootTarget = null;
-    
+
     private Vector2 _referenceResolution = new Vector2(1920, 1080);
     private Vector2 _screenScale = new Vector2(1, 1);
-    
-    public List<InventoryItem> _inventoryItems1 = new List<InventoryItem>();
-    public List<InventoryItem> _inventoryItems2 = new List<InventoryItem>();
+
+    private List<InventoryItem> _inventoryItems1 = new List<InventoryItem>();
+    private List<InventoryItem> _inventoryItems2 = new List<InventoryItem>();
 
     private bool _isInventoryOpen = false; public bool isInventoryOpen { get { return _isInventoryOpen; } }
+
     private void Awake()
     {
         _itemPickupPanel.gameObject.SetActive(false);
@@ -76,11 +75,11 @@ public class CanvasManager : MonoBehaviour
         _serverButton.onClick.AddListener(StartServer);
         _clientButton.onClick.AddListener(StartClient);
         _inventoryCloseButton.onClick.AddListener(CloseInventory);
-        
+
         _itemPickupBox.anchorMax = Vector2.zero;
         _itemPickupBox.anchorMin = Vector2.zero;
         _itemPickupBox.pivot = Vector2.zero;
-        
+
         _itemLootBox.anchorMax = Vector2.zero;
         _itemLootBox.anchorMin = Vector2.zero;
         _itemLootBox.pivot = Vector2.zero;
@@ -119,7 +118,6 @@ public class CanvasManager : MonoBehaviour
         else if (_characterToLoot != null)
         {
             Vector2 position = CameraManager.mainCamera.WorldToScreenPoint(_characterToLoot.transform.position) * _screenScale;
-
             if (position.x - _itemLootLeftOffset < 0)
             {
                 position.x = _itemLootLeftOffset;
@@ -128,11 +126,10 @@ public class CanvasManager : MonoBehaviour
             {
                 position.x = _referenceResolution.x - _itemLootBox.sizeDelta.x - _itemLootRightOffset;
             }
-            if (position.y - _itemLootTopOffset < 0)
+            if (position.y - _itemLootButtomOffset < 0)
             {
-                position.y = _itemLootTopOffset;
+                position.y = _itemLootButtomOffset;
             }
-
             if (position.y + _itemLootBox.sizeDelta.y + _itemLootTopOffset > _referenceResolution.y)
             {
                 position.y = _referenceResolution.y - _itemLootBox.sizeDelta.y - _itemLootTopOffset;
@@ -160,14 +157,7 @@ public class CanvasManager : MonoBehaviour
         if (_itemToPick != null)
         {
             _itemPickupName.text = _itemToPick.id;
-            if (_itemToPick.GetType() == typeof(Ammo))
-            {
-                _itemPickupAmount.text = "x" + ((Ammo)_itemToPick).amount.ToString();
-            }
-            else
-            {
-                _itemPickupAmount.text = "x1";
-            }
+            _itemPickupAmount.text = "x" + _itemToPick.GetAmount().ToString();
             _itemPickupPanel.gameObject.SetActive(true);
         }
         else
@@ -186,29 +176,6 @@ public class CanvasManager : MonoBehaviour
         else
         {
             _itemLootPanel.gameObject.SetActive(false);
-        }
-    }
-
-    public void OpenInventory()
-    {
-        if (_isInventoryOpen)
-        {
-            return;
-        }
-        if (Character.localPlayer != null)
-        {
-            ClearInventoryItems();
-            _inventoryGridTitle1.text = "Inventário";
-            _inventoryGridTitle2.text = "No chão";
-            for (int i = 0; i < Character.localPlayer.inventory.Count; i++)
-            {
-                InventoryItem item = Instantiate(_InventoryItemPrefab, _inventoryGrid1);
-                item.Initialize(Character.localPlayer.inventory[i]);
-                _inventoryItems1.Add(item);
-            }
-            _isInventoryOpen = true;
-            Cursor.lockState = CursorLockMode.None;
-            _inventoryPanel.gameObject.SetActive(true);
         }
     }
 
@@ -234,12 +201,11 @@ public class CanvasManager : MonoBehaviour
                 }
                 for (int i = 0; i < _inventoryItems1.Count; i++)
                 {
-                    if (_inventoryItems1[i] != null && _inventoryItems1[i].item != null && Character.localPlayer.inventory.Contains(_inventoryItems1[i].item))
+                    if (_inventoryItems1[i] != null && _inventoryItems1[i].item != null && _characterLootTarget.inventory.Contains(_inventoryItems1[i].item))
                     {
                         itemsToTake.Add(_inventoryItems1[i].item, _inventoryItems1[i].count);
                     }
                 }
-
                 if (itemsToStore.Count > 0 || itemsToTake.Count > 0)
                 {
                     SessionManager.singleton.TradeItemsBetweenCharacters(Character.localPlayer, _characterLootTarget, itemsToStore, itemsToTake);
@@ -261,10 +227,34 @@ public class CanvasManager : MonoBehaviour
                 Character.localPlayer.DropItems(items);
             }
         }
-        
+
+        _characterLootTarget = null;
         _isInventoryOpen = false;
         Cursor.lockState = CursorLockMode.Locked;
         _inventoryPanel.gameObject.SetActive(false);
+    }
+
+    public void OpenInventory()
+    {
+        if (_isInventoryOpen)
+        {
+            return;
+        }
+        if (Character.localPlayer != null)
+        {
+            ClearInventoryItems();
+            _inventoryGridTitle1.text = "Inventory";
+            _inventoryGridTitle2.text = "On Ground";
+            for (int i = 0; i < Character.localPlayer.inventory.Count; i++)
+            {
+                InventoryItem item = Instantiate(_inventoryItemPrefab, _inventoryGrid1);
+                item.Initialize(Character.localPlayer.inventory[i]);
+                _inventoryItems1.Add(item);
+            }
+            _isInventoryOpen = true;
+            Cursor.lockState = CursorLockMode.None;
+            _inventoryPanel.gameObject.SetActive(true);
+        }
     }
 
     public void OpenInventoryForLoot(Character lootTarget)
@@ -273,17 +263,22 @@ public class CanvasManager : MonoBehaviour
         {
             return;
         }
-
         if (lootTarget != null && lootTarget.health <= 0 && Character.localPlayer != null && lootTarget != Character.localPlayer)
         {
             _characterLootTarget = lootTarget;
             ClearInventoryItems();
-            _inventoryGridTitle1.text = "Inventário";
-            // ToDo: username
+            _inventoryGridTitle1.text = "Inventory";
+            // ToDo: Use username
             _inventoryGridTitle2.text = "Player" + lootTarget.clientID.ToString();
+            for (int i = 0; i < Character.localPlayer.inventory.Count; i++)
+            {
+                InventoryItem item = Instantiate(_inventoryItemPrefab, _inventoryGrid1);
+                item.Initialize(Character.localPlayer.inventory[i]);
+                _inventoryItems1.Add(item);
+            }
             for (int i = 0; i < _characterLootTarget.inventory.Count; i++)
             {
-                InventoryItem item = Instantiate(_InventoryItemPrefab, _inventoryGrid2);
+                InventoryItem item = Instantiate(_inventoryItemPrefab, _inventoryGrid2);
                 item.Initialize(_characterLootTarget.inventory[i]);
                 _inventoryItems2.Add(item);
             }
@@ -291,7 +286,6 @@ public class CanvasManager : MonoBehaviour
             Cursor.lockState = CursorLockMode.None;
             _inventoryPanel.gameObject.SetActive(true);
         }
-
     }
 
     public void ItemClicked(InventoryItem item)
