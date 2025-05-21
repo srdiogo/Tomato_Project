@@ -26,17 +26,18 @@ public class Character : NetworkBehaviour
 
     private Weapon _weapon = null; public Weapon weapon { get { return _weapon; } }
     private Ammo _ammo = null; public Ammo ammo { get { return _ammo; } }
-    private List<Item> _items = new List<Item>();
+    private List<Item> _items = new List<Item>(); public List<Item> inventory { get { return _items; } }
     private Animator _animator = null;
     private RigManager _rigManager = null;
     private Weapon _weaponToEquip = null;
+    private NetworkObject _networkObject = null;
     private bool _reloading = false; public bool reloading { get { return _reloading; } }
     private bool _switchingWeapon = false; public bool switchingWeapon { get { return _switchingWeapon; } }
 
     private Rigidbody[] _ragdollRigidbodies = null;
     private Collider[] _ragdollColliders = null;
 
-    private float _health = 100;
+    private float _health = 100; public float health { get { return _health; } }
 
     private bool _grounded = false; public bool isGrounded { get { return _grounded; } set { _grounded = value; } }
     private bool _walking = false; public bool walking { get { return _walking; } set { _walking = value; } }
@@ -51,7 +52,7 @@ public class Character : NetworkBehaviour
     private Vector3 _lastAimTarget = Vector3.zero;
     private Vector3 _lastPosition = Vector3.zero;
 
-    private ulong _clientID = 0;
+    private ulong _clientID = 0; public ulong clientID { get { return _clientID; } }
     private bool _initialized = false;
     private bool _componentsInitialized = false;
 
@@ -62,11 +63,14 @@ public class Character : NetworkBehaviour
     private Vector2 _aimedMoveSpeed = Vector2.zero;
     private Vector2 _lastAimedMoveSpeed = Vector2.zero;
     private bool _lastAiming = false;
+    
+    public static Character localPlayer = null;
 
 
     [System.Serializable] public struct Data
     {
-        public Dictionary<string, int> items;
+        public float health;
+        public Dictionary<string, (string, int)> items;
         public List<string> itemsId;
         public List<string> equippedIds;
     }
@@ -74,7 +78,8 @@ public class Character : NetworkBehaviour
     public Data GetData()
     {
         Data data = new Data();
-        data.items = new Dictionary<string, int>();
+        data.health = _health;
+        data.items = new Dictionary<string, (string, int)>();
         data.itemsId = new List<string>();
         data.equippedIds = new List<string>();
         for (int i = 0; i < _items.Count; i++)
@@ -94,7 +99,7 @@ public class Character : NetworkBehaviour
                 value = ((Ammo)_items[i]).amount;
             }
 
-            data.items.Add(_items[i].id, value);
+            data.items.Add(i.ToString(), (_items[i].id, value));
             data.itemsId.Add(_items[i].networkID);
 
             if (_weapon != null && _items[i] == _weapon)
@@ -120,6 +125,7 @@ public class Character : NetworkBehaviour
         {
             return;
         }
+        gameObject.tag = "Character";
         _componentsInitialized = true;
         _ragdollRigidbodies = GetComponentsInChildren<Rigidbody>();
         _ragdollColliders = GetComponentsInChildren<Collider>();
@@ -141,9 +147,11 @@ public class Character : NetworkBehaviour
         _rigManager = GetComponent<RigManager>();
         _animator = GetComponent<Animator>();
         _fallTimeoutDelta = FallTimeout;
+        _networkObject = GetComponent<NetworkObject>();
+        _networkObject.DontDestroyWithOwner = false;
     }
 
-    public void InitializeServer(Dictionary<string, int> items, List<string> itemsId, List<string> equippedIds, ulong clientID)
+    public void InitializeServer(Dictionary<string, (string, int)> items, List<string> itemsId, List<string> equippedIds, ulong clientID)
     {
         if (_initialized)
         {
@@ -152,7 +160,7 @@ public class Character : NetworkBehaviour
         _initialized = true;
         InitializeComponents();
         _clientID = clientID;
-        SetLayer(transform, LayerMask.NameToLayer("NetworkPlayer"));
+        Tools.SetLayerMask(transform, LayerMask.NameToLayer("NetworkPlayer"));
         _Initialize(items, itemsId, equippedIds);
     }
 
@@ -168,13 +176,14 @@ public class Character : NetworkBehaviour
         _clientID = clientID;
         if (IsOwner)
         {
-            SetLayer(transform, LayerMask.NameToLayer("LocalPlayer"));
+            Tools.SetLayerMask(transform, LayerMask.NameToLayer("LocalPlayer"));
+            localPlayer = this;
         }
         else
         {
-            SetLayer(transform, LayerMask.NameToLayer("NetworkPlayer"));
+            Tools.SetLayerMask(transform, LayerMask.NameToLayer("NetworkPlayer"));
         }
-        Dictionary<string, int> items = JsonMapper.ToObject<Dictionary<string, int>>(itemsJson);
+        Dictionary<string, (string, int)> items = JsonMapper.ToObject<Dictionary<string, (string, int)>>(itemsJson);
         List<string> itemsId = JsonMapper.ToObject<List<string>>(itemsIdJson);
         List<string> equippedIds = JsonMapper.ToObject<List<string>>(equippedJson);
         List<Item.Data> itemsOnGround = JsonMapper.ToObject<List<Item.Data>>(itemsOnGroundJson);
@@ -263,18 +272,28 @@ public class Character : NetworkBehaviour
         _clientID = clientID;
         if (IsOwner)
         {
-            SetLayer(transform, LayerMask.NameToLayer("LocalPlayer"));
+            Tools.SetLayerMask(transform, LayerMask.NameToLayer("LocalPlayer"));
+            localPlayer = this;
         }
         else
         {
-            SetLayer(transform, LayerMask.NameToLayer("NetworkPlayer"));
+            Tools.SetLayerMask(transform, LayerMask.NameToLayer("NetworkPlayer"));
         }
         Data data = JsonMapper.ToObject<Data>(dataJson);
+        _health = data.health;
         _Initialize(data.items, data.itemsId, data.equippedIds);
+        if (_health <= 0)
+        {
+            HealthCheck();
+        }
     }
 
     private void Update()
     {
+        if (_health <= 0)
+        {
+            return;
+        }
         bool armed = _weapon != null;
         GroundedCheck();
         FreeFall();
@@ -450,7 +469,7 @@ public class Character : NetworkBehaviour
         }
     }
     
-    private void _Initialize(Dictionary<string, int> items, List<string> itemsId, List<string> equippedIds)
+    private void _Initialize(Dictionary<string, (string, int)> items, List<string> itemsId, List<string> equippedIds)
     {
         InitializeComponents();
         if (items != null && PrefabManager.singleton != null)
@@ -460,7 +479,7 @@ public class Character : NetworkBehaviour
             int equippedAmmoIndex = -1;
             foreach (var itemData in items)
             {
-                Item prefab = PrefabManager.singleton.GetItemPrefab(itemData.Key);
+                Item prefab = PrefabManager.singleton.GetItemPrefab(itemData.Value.Item1);
                 if (prefab != null)
                 {
                     Item item = Instantiate(prefab, transform);
@@ -473,7 +492,7 @@ public class Character : NetworkBehaviour
                         item.transform.SetParent(_weaponHolder);
                         item.transform.localPosition = w.rightHandPosition;
                         item.transform.localEulerAngles = w.rightHandRotation;
-                        w.ammo = itemData.Value;
+                        w.ammo = itemData.Value.Item2;
                         if (equippedIds.Contains(item.networkID) || equippedWeaponIndex < 0)
                         {
                             equippedWeaponIndex = i;
@@ -482,7 +501,7 @@ public class Character : NetworkBehaviour
                     else if (item.GetType() == typeof(Ammo))
                     {
                         Ammo a = (Ammo)item;
-                        a.amount = itemData.Value;
+                        a.amount = itemData.Value.Item2;
                         if (equippedIds.Contains(item.networkID))
                         {
                             equippedAmmoIndex = i;
@@ -494,14 +513,30 @@ public class Character : NetworkBehaviour
                     i++;
                 }
             }
-            if (equippedWeaponIndex >= 0 && _weapon == null)
+
+            if (_health > 0)
             {
-                _weaponToEquip = (Weapon)_items[equippedWeaponIndex];
-                OnEquip();
-            }
-            if (equippedAmmoIndex >= 0)
-            {
-                _EquipAmmo((Ammo)_items[equippedAmmoIndex]);
+                if (equippedWeaponIndex >= 0 && _weapon == null)
+                {
+                    _weaponToEquip = (Weapon)_items[equippedWeaponIndex];
+                    OnEquip();
+                }
+                if (equippedAmmoIndex >= 0)
+                {
+                    _EquipAmmo((Ammo)_items[equippedAmmoIndex]);
+                }
+
+                if (_ammo != null && _ammo.amount > 0 && _weapon.ammo < _weapon.clipSize)
+                {
+                    int amount = _weapon.clipSize - _weapon.ammo;
+                    if (_ammo.amount < amount)
+                    {
+                        amount = _ammo.amount;
+                    }
+                    _ammo.amount -= amount;
+                    _weapon.ammo += amount;
+                }
+                
             }
         }
     }
@@ -761,27 +796,67 @@ public class Character : NetworkBehaviour
 
     public void ApplyDamage(Character shooter, Transform hit, float damage)
     {
-        if (_health > 0)
+        if (_health > 0 && damage > 0)
         {
-            _health -= damage;
-            if (_health <= 0)
+            if (hit == _animator.GetBoneTransform(HumanBodyBones.Head))
             {
-                _health = 0;
-                SetRagdollStatus(true);
-                Destroy(_rigManager);
-                Destroy(GetComponent<RigBuilder>());
-                Destroy(_animator);
-                ThirdPersonController thirdPersonController = GetComponent<ThirdPersonController>();
-                if (thirdPersonController != null)
-                {
-                    Destroy(thirdPersonController);
-                }
-                CharacterController controller = GetComponent<CharacterController>();
-                if (controller != null)
-                {
-                    Destroy(controller);
-                }
-                Destroy(this);
+                damage *= 3f;
+            }
+            _health -= damage;
+            if (health <= 0)
+            {
+                _networkObject.DontDestroyWithOwner = true;
+            }
+            HealthCheck();
+            ApplyDamageClientRpc(shooter.clientID, clientID, damage, _health);
+        }
+    }
+
+    [ClientRpc]
+    public void ApplyDamageClientRpc(ulong shoot, ulong target, float damage, float remainedHealth)
+    {
+        _health = remainedHealth;
+        HealthCheck();
+    }
+    
+    public void HealthCheck()
+    {
+        if (_health <= 0)
+        {
+            _health = 0;
+            SetRagdollStatus(true);
+            Destroy(_rigManager);
+            Destroy(GetComponent<RigBuilder>());
+            Destroy(_animator);
+            ThirdPersonController thirdPersonController = GetComponent<ThirdPersonController>();
+            if (thirdPersonController != null)
+            {
+                Destroy(thirdPersonController);
+            }
+            CharacterController controller = GetComponent<CharacterController>();
+            if (controller != null)
+            {
+                Destroy(controller);
+            }
+
+            if (_weapon != null)
+            {
+                _items.Remove(_weapon);
+                _weapon.transform.SetParent(null, true);
+                _weapon.SetOnGroundStatus(true);
+            }
+            
+            ClientNetworkTransform networkTransform = GetComponent<ClientNetworkTransform>();
+            if (networkTransform != null)
+            {
+                networkTransform.SyncPositionX = false;
+                networkTransform.SyncPositionY = false;
+                networkTransform.SyncPositionZ = false;
+                networkTransform.SyncRotAngleX = false;
+                networkTransform.SyncRotAngleY = false;
+                networkTransform.SyncRotAngleZ = false;
+
+                
             }
         }
     }
@@ -850,15 +925,6 @@ public class Character : NetworkBehaviour
     public void EquipFinished()
     {
         _switchingWeapon = false;
-    }
-
-    private void SetLayer(Transform root, int layer)
-    {
-        var children = root.GetComponentsInChildren<Transform>(true);
-        foreach (var child in children)
-        {
-            child.gameObject.layer = layer;
-        }
     }
 
     private float _fallTimeoutDelta;

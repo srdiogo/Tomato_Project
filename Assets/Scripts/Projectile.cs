@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 public class Projectile : MonoBehaviour
@@ -62,18 +63,28 @@ public class Projectile : MonoBehaviour
         }
 
         Character character = collision.transform.root.GetComponent<Character>();
-        if (character != null)
+        if (NetworkManager.Singleton.IsServer)
         {
-            character.ApplyDamage(_shooter, collision.transform, _damage);
-        }
-        else if (_defaultImpact != null)
-        {
-            if(collision.gameObject.layer != LayerMask.NameToLayer("LocalPlayer") && collision.gameObject.layer != LayerMask.NameToLayer("NetworkPlayer"))
+            if (character != null)
             {
-                Transform impact = Instantiate(_defaultImpact, collision.contacts[0].point, Quaternion.FromToRotation(Vector3.up, collision.contacts[0].normal));
-                Destroy(impact.gameObject, 30f);
+                character.ApplyDamage(_shooter, collision.transform, _damage);
             }
         }
+        else
+        {
+            if (character != null)
+            {
+            }
+            else if (_defaultImpact != null)
+            {
+                if(collision.gameObject.layer != LayerMask.NameToLayer("LocalPlayer") && collision.gameObject.layer != LayerMask.NameToLayer("NetworkPlayer"))
+                {
+                    Transform impact = Instantiate(_defaultImpact, collision.contacts[0].point, Quaternion.FromToRotation(Vector3.up, collision.contacts[0].normal));
+                    Destroy(impact.gameObject, 30f);
+                }
+            }
+        }
+ 
         Destroy(gameObject);
     }
 

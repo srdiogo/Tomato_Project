@@ -194,25 +194,53 @@ namespace StarterAssets
             CameraManager.singleton.aiming = _character.aiming;
             _character.aimTarget = CameraManager.singleton.aimTargetPoint;
 
+            if (_input.inventory)
+            {
+                CanvasManager.singleton.OpenInventory();
+                _input.inventory = false;
+            }
+
             float maxPickupDistance = 3f;
             Item itemToPick = null;
-            if (CameraManager.singleton.aimTargetObject != null && CameraManager.singleton.aimTargetObject.tag == "Item" && Vector3.Distance(CameraManager.singleton.aimTargetObject.position, transform.position) <= maxPickupDistance)
+            Character characterToLoot = null;
+            if (CanvasManager.singleton.isInventoryOpen == false && CameraManager.singleton.aimTargetObject != null)
             {
-                itemToPick = CameraManager.singleton.aimTargetObject.GetComponent<Item>();
-                if (itemToPick.canBePickedUp == false)
+                if (CameraManager.singleton.aimTargetObject.tag == "Item" && Vector3.Distance(CameraManager.singleton.aimTargetObject.position, transform.position) <= maxPickupDistance)
                 {
-                    itemToPick = null;
+                    itemToPick = CameraManager.singleton.aimTargetObject.GetComponent<Item>();
+                    if (itemToPick != null && itemToPick.canBePickedUp == false)
+                    {
+                        itemToPick = null;
+                    }
+                }
+                else if (CameraManager.singleton.aimTargetObject.root.tag == "Character" && Vector3.Distance(CameraManager.singleton.aimTargetObject.position, transform.position) <= maxPickupDistance)
+                {
+                    characterToLoot = CameraManager.singleton.aimTargetObject.root.GetComponent<Character>();
+                    if (characterToLoot != null && characterToLoot.health > 0)
+                    {
+                        characterToLoot = null;
+                    }
                 }
             }
-            if (CanvasManager.singleton.itemToPick != itemToPick)
+            if (CanvasManager.singleton.characterToLoot == null && CanvasManager.singleton.itemToPick != itemToPick)
             {
                 CanvasManager.singleton.itemToPick = itemToPick;
             }
+            else if (CanvasManager.singleton.itemToPick == null && CanvasManager.singleton.characterToLoot != characterToLoot)
+            {
+                CanvasManager.singleton.characterToLoot = characterToLoot;
+            }
+            
+            
             if (_input.pickupItem)
             {
                 if (CanvasManager.singleton.itemToPick != null)
                 {
                     _character.PickupItem(CanvasManager.singleton.itemToPick.networkID);
+                }
+                else if (CanvasManager.singleton.characterToLoot != null)
+                {
+                    CanvasManager.singleton.OpenInventoryForLoot(CanvasManager.singleton.characterToLoot);
                 }
                 _input.pickupItem = false;
             }
