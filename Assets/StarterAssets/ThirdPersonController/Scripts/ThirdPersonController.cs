@@ -279,14 +279,19 @@ namespace StarterAssets
 
         private void CameraRotation()
         {
+            Vector2 _lookInput = _input.look;
+            if (CanvasManager.singleton.isInventoryOpen)
+            {
+                _lookInput = Vector2.zero;
+            }
             // if there is an input and camera position is not fixed
-            if (_input.look.sqrMagnitude >= _threshold && !LockCameraPosition)
+            if (_lookInput.sqrMagnitude >= _threshold && !LockCameraPosition)
             {
                 //Don't multiply mouse input by Time.deltaTime;
                 float deltaTimeMultiplier = IsCurrentDeviceMouse ? 1.0f : Time.deltaTime;
 
-                _cinemachineTargetYaw += _input.look.x * CameraManager.singleton.sensitivity * deltaTimeMultiplier;
-                _cinemachineTargetPitch += _input.look.y * CameraManager.singleton.sensitivity * deltaTimeMultiplier;
+                _cinemachineTargetYaw += _lookInput.x * CameraManager.singleton.sensitivity * deltaTimeMultiplier;
+                _cinemachineTargetPitch += _lookInput.y * CameraManager.singleton.sensitivity * deltaTimeMultiplier;
             }
 
             // clamp our rotations so our values are limited 360 degrees

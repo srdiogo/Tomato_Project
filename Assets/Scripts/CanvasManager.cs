@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEditor;
 
 public class CanvasManager : MonoBehaviour
 {
@@ -216,6 +217,49 @@ public class CanvasManager : MonoBehaviour
         if (_isInventoryOpen == false)
         {
             return;
+        }
+
+        if (_characterLootTarget != null)
+        {
+            if (Character.localPlayer != null)
+            {
+                Dictionary<Item, int> itemsToStore = new Dictionary<Item, int>();
+                Dictionary<Item, int> itemsToTake = new Dictionary<Item, int>();
+                for (int i = 0; i < _inventoryItems2.Count; i++)
+                {
+                    if (_inventoryItems2[i] != null && _inventoryItems2[i].item != null && Character.localPlayer.inventory.Contains(_inventoryItems2[i].item))
+                    {
+                        itemsToStore.Add(_inventoryItems2[i].item, _inventoryItems2[i].count);
+                    }
+                }
+                for (int i = 0; i < _inventoryItems1.Count; i++)
+                {
+                    if (_inventoryItems1[i] != null && _inventoryItems1[i].item != null && Character.localPlayer.inventory.Contains(_inventoryItems1[i].item))
+                    {
+                        itemsToTake.Add(_inventoryItems1[i].item, _inventoryItems1[i].count);
+                    }
+                }
+
+                if (itemsToStore.Count > 0 || itemsToTake.Count > 0)
+                {
+                    SessionManager.singleton.TradeItemsBetweenCharacters(Character.localPlayer, _characterLootTarget, itemsToStore, itemsToTake);
+                }
+            }
+        }
+        else
+        {
+            if (_inventoryItems2.Count > 0 && Character.localPlayer != null)
+            {
+                Dictionary<Item, int> items = new Dictionary<Item, int>();
+                for (int i = 0; i < _inventoryItems2.Count; i++)
+                {
+                    if (_inventoryItems2[i] != null && _inventoryItems2[i].item != null)
+                    {
+                        items.Add(_inventoryItems2[i].item, _inventoryItems2[i].count);
+                    }
+                }
+                Character.localPlayer.DropItems(items);
+            }
         }
         
         _isInventoryOpen = false;

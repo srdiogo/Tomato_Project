@@ -3,6 +3,7 @@ using StarterAssets;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 
@@ -1044,13 +1045,25 @@ public class Character : NetworkBehaviour
     {
         bool success = false;
         Item[] allItems = FindObjectsByType<Item>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        Item merge = null;
         if (allItems != null)
         {
             for (int i = 0; i < allItems.Length; i++)
             {
                 if (allItems[i].transform.parent == null && allItems[i].networkID == networkID)
                 {
-                    AddItemToInventory(allItems[i]);
+                    if (allItems[i].GetType() == typeof(Ammo))
+                    {
+                        for (int j = 0; j < _items.Count; j++)
+                        {
+                            if (_items[j].id == allItems[i].id)
+                            {
+                                merge = _items[j];
+                                break;
+                            }
+                        }
+                    }
+                    AddItemToInventoryLocally(allItems[i], merge);
                     success = true;
                     break;
                 }
@@ -1058,7 +1071,7 @@ public class Character : NetworkBehaviour
         }
         if (success)
         {
-            PickupItemClientRpc(networkID, true);
+            PickupItemClientRpc(networkID, true ,merge != null? merge.networkID : "");
         }
         else
         {
@@ -1066,12 +1079,12 @@ public class Character : NetworkBehaviour
             target[0] = serverRpcParams.Receive.SenderClientId;
             ClientRpcParams clientRpcParams = default;
             clientRpcParams.Send.TargetClientIds = target;
-            PickupItemClientRpc(networkID, false, clientRpcParams);
+            PickupItemClientRpc(networkID, false,"", clientRpcParams);
         }
     }
 
     [ClientRpc]
-    private void PickupItemClientRpc(string networkID, bool success, ClientRpcParams rpcParams = default)
+    private void PickupItemClientRpc(string networkID, bool success, string mergeNetworkID, ClientRpcParams rpcParams = default)
     {
         if (success)
         {
@@ -1084,7 +1097,19 @@ public class Character : NetworkBehaviour
                     if (allItems[i].transform.parent == null && allItems[i].networkID == networkID)
                     {
                         found = true;
-                        AddItemToInventory(allItems[i]);
+                        Item merge = null;
+                        if (string.IsNullOrEmpty(mergeNetworkID) == false)
+                        {
+                            for (int j = 0; j < _items.Count; j++)
+                            {
+                                if(_items[j].networkID == mergeNetworkID)
+                                {
+                                    merge = _items[j];
+                                    break;
+                                }
+                            }
+                        }
+                        AddItemToInventoryLocally(allItems[i], merge);
                         break;
                     }
                 }
@@ -1097,24 +1122,70 @@ public class Character : NetworkBehaviour
         _pickingItem = false;
     }
 
-    public void AddItemToInventory(Item item)
+    public void AddItemToInventoryLocally(Item item, Item merge = null)
     {
-        item.transform.SetParent(transform);
-        item.Initialize();
-        item.SetOnGroundStatus(false);
-        if (item.GetType() == typeof(Weapon))
+        if (item == null || _items.Contains(item))
         {
-            Weapon w = (Weapon)item;
-            item.transform.SetParent(_weaponHolder);
-            item.transform.localPosition = w.rightHandPosition;
-            item.transform.localEulerAngles = w.rightHandRotation;
+            return;
         }
-        else if (item.GetType() == typeof(Ammo))
-        {
 
+        if (merge != null && _items.Contains(merge))
+        {
+            if (merge.GetType() == item.GetType())
+            {
+                if (item.GetType() == typeof(Ammo))
+                {
+                    ((Ammo)merge).amount += ((Ammo)item).amount;
+                }
+                Destroy(item.gameObject);
+            }
+            else
+            {
+                //problem
+            }
         }
+        else
+        {
+            item.transform.SetParent(transform);
+            item.Initialize();
+            item.SetOnGroundStatus(false);
+            if (item.GetType() == typeof(Weapon))
+            {
+                Weapon w = (Weapon)item;
+                item.transform.SetParent(_weaponHolder);
+                item.transform.localPosition = w.rightHandPosition;
+                item.transform.localEulerAngles = w.rightHandRotation;
+            }
+            else if (item.GetType() == typeof(Ammo))
+            {
+                if(_ammo == null && _weapon != null && _weapon.ammoID == ((Ammo)item).id)
+                {
+                    _EquipAmmo((Ammo)item);
+                }
+            }
+        }
+
         item.gameObject.SetActive(false);
         _items.Add(item);
+    }
+
+    public void RemoveItemFromInventoryLocally(Item item)
+    {
+        if (item != null || _items.Contains(item) == false)
+        {
+            return;
+        }
+
+        if (item == _weapon)
+        {
+            _weapon = null;
+        }
+
+        if (item == _ammo)
+        {
+            _ammo = null;
+        }
+        _items.Remove(item);
     }
 
     private void OnFootstep(AnimationEvent animationEvent)
@@ -1135,6 +1206,186 @@ public class Character : NetworkBehaviour
         {
             AudioSource.PlayClipAtPoint(LandingAudioClip, transform.TransformPoint(_controller.center), FootstepAudioVolume);
         }*/
+    }
+
+    public void DropItem(Item item, int count)
+    {
+        if (item != null)
+        {
+            Dictionary<Item, int> items = new Dictionary<Item, int>();
+            items.Add(item, count);
+            DropItems(items);
+        }
+    }
+
+    public void DropItems(Dictionary<Item, int> items)
+    {
+        Dictionary<string, int> serializableItems = new Dictionary<string, int>();
+        foreach (var item in items)
+        {
+            if (item.Value <= 0 && item.Key.GetType() == typeof(Ammo))
+            {
+                continue;
+            }
+
+            if (item.Key != null && _items.Contains(item.Key))
+            {
+                serializableItems.Add(item.Key.networkID, item.Value);
+            }
+        }
+
+        if (serializableItems.Count > 0)
+        {
+            string itemsJson = JsonMapper.ToJson(serializableItems);
+            DropItemsServerRpc(itemsJson);
+        }
+    }
+
+    [ServerRpc]
+    public void DropItemsServerRpc(string itemsJson, ServerRpcParams serverRpcParams = default)
+    {
+        Dictionary<string, int> items = JsonMapper.ToObject<Dictionary<string, int>>(itemsJson);
+        Dictionary<string, int> droppedItems = new Dictionary<string, int>();
+        Dictionary<string, (string,int)> splitItems = new Dictionary<string, (string,int)>();
+
+        foreach (var item in items)
+        {
+            for (int i = 0; i < _items.Count; i++)
+            {
+                if (item.Key == _items[i].networkID)
+                {
+                    int count = item.Value;
+                    int remained = 0;
+                    if (_items[i].GetType() == typeof(Ammo))
+                    {
+                        Ammo ammo = (Ammo)_items[i];
+                        if (count <= 0)
+                        {
+                            break;
+                        }
+                        else if (ammo.amount < count)
+                        {
+                            count = ammo.amount;
+                        }
+                        else if (ammo.amount > count)
+                        {
+                            remained = ammo.amount - count;
+                            ammo.amount = count;
+                        }
+                    }
+                    else if (_items[i].GetType() == typeof(Weapon))
+                    {
+                        count = ((Weapon)_items[i]).ammo;
+                    }
+                    else
+                    {
+                        count = 1;
+                    }
+
+                    if (remained > 0)
+                    {
+                        Item prefab = PrefabManager.singleton.GetItemPrefab(_items[i].id);
+                        if (prefab != null)
+                        {
+                            Item splitItem = Instantiate(prefab, transform);
+                            splitItem.networkID = System.Guid.NewGuid().ToString();
+                            if (splitItem.GetType() == typeof(Ammo))
+                            {
+                                ((Ammo)splitItem).amount = remained;
+                            }
+                            AddItemToInventoryLocally(splitItem);
+                            splitItems.Add(splitItem.networkID, (_items[i].id, remained));
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    _Dropitem(_items[i]);
+                    droppedItems.Add(item.Key, count);
+                    break;
+                }
+            }
+        }
+
+        if (droppedItems.Count > 0)
+        {
+            string droppedItemsJson = JsonMapper.ToJson(droppedItems);
+            string splitItemsJson = JsonMapper.ToJson(splitItems);
+            DropItemsClientRpc(droppedItemsJson, splitItemsJson);
+        }
+    }
+
+    [ClientRpc]
+    public void DropItemsClientRpc(string droppedItemsJson, string splitItemsJson, ClientRpcParams serverRpcParams = default)
+    {
+        Dictionary<string, int> items = JsonMapper.ToObject<Dictionary<string, int>>(droppedItemsJson);
+        Dictionary<string, (string,int)> splitItems = JsonMapper.ToObject<Dictionary<string, (string,int)>>(splitItemsJson);
+        foreach (var item in items)
+        {
+            bool found = false;
+            for (int i = 0; i < _items.Count; i++)
+            {
+                if (_items[i].networkID == item.Key)
+                {
+                    if (_items[i].GetType() == typeof(Ammo))
+                    {
+                        ((Ammo)_items[i]).amount = item.Value;
+                    }
+                    else if (_items[i].GetType() == typeof(Weapon))
+                    {
+                        ((Weapon)_items[i]).ammo = item.Value;
+                    }
+                    _Dropitem(_items[i]);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (found == false)
+            {
+                //problem
+            }
+        }
+        foreach (var item in splitItems)
+        {
+            Item prefab = PrefabManager.singleton.GetItemPrefab(item.Value.Item1);
+            if (prefab != null)
+            {
+                Item splitItem = Instantiate(prefab, transform);
+                splitItem.networkID = item.Key;
+                if (item.Key.GetType() == typeof(Ammo))
+                {
+                    ((Ammo)splitItem).amount = item.Value.Item2;
+                }
+                AddItemToInventoryLocally(splitItem);
+            }
+        }
+    }
+
+    private void _Dropitem(Item item)
+    {
+        if (_items.Contains(item) == false)
+        {
+            return;
+        }
+
+        if (item == _weapon)
+        {
+            _weapon = null;
+        }
+
+        if (item == _ammo)
+        {
+            _ammo = null;
+        }
+        item.transform.SetParent(null);
+        item.SetOnGroundStatus(true);
+        Vector3 offset = new Vector3(Random.Range(-1.0f, 1.0f),0, Random.Range(-1.0f, 1.0f));
+        item.transform.position = transform.position + transform.forward.normalized + Vector3.up + offset;
+        item.transform.rotation = Quaternion.identity;
+        item.gameObject.SetActive(true);
+        _items.Remove(item);
     }
 
 }

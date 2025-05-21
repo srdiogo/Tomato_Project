@@ -58,7 +58,7 @@ public class SessionManager : NetworkBehaviour
 
             _characters.Add(serverRpcParams.Receive.SenderClientId, character);
 
-            Dictionary<string, (string, int)> items = new Dictionary<string, (string, int)> { { "0",  ("AWP", 30) }, { "1", ("h", 1000) } };
+            Dictionary<string, (string, int)> items = new Dictionary<string, (string, int)> { { "0", ("AKM", 30) }, { "1", ("h", 1000) } };
             List<string> itemsId = new List<string>();
             List<string> equippedIds = new List<string>();
             for (int i = 0; i < items.Count; i++)
@@ -114,6 +114,326 @@ public class SessionManager : NetworkBehaviour
     public void StartClient()
     {
         NetworkManager.Singleton.StartClient();
+    }
+
+    public void TradeItemsBetweenCharacters(Character character1, Character character2, Dictionary<Item, int> character1To2Items, Dictionary<Item, int> character2To1Items)
+    {
+        if (character1 == null || character2 == null || character1 == character2)
+        {
+            return;
+        }
+        Dictionary<string, int> serializable1To2 = new Dictionary<string, int>();
+        Dictionary<string, int> serializable2To1 = new Dictionary<string, int>();
+        if (character1To2Items != null)
+        {
+            foreach (var item in character1To2Items)
+            {
+                if (item.Value <= 0 && item.Key.GetType() == typeof(Ammo))
+                {
+                    continue;
+                }
+                if (item.Key != null && character1.inventory.Contains(item.Key))
+                {
+                    serializable1To2.Add(item.Key.networkID, item.Value);
+                }
+            }
+        }
+        if (character2To1Items != null)
+        {
+            foreach (var item in character2To1Items)
+            {
+                if (item.Value <= 0 && item.Key.GetType() == typeof(Ammo))
+                {
+                    continue;
+                }
+                if (item.Key != null && character2.inventory.Contains(item.Key))
+                {
+                    serializable2To1.Add(item.Key.networkID, item.Value);
+                }
+            }
+        }
+        if (serializable1To2.Count > 0 || serializable2To1.Count > 0)
+        {
+            string json1 = JsonMapper.ToJson(serializable1To2);
+            string json2 = JsonMapper.ToJson(serializable2To1);
+            TradeItemsBetweenCharactersServerRpc(character1.clientID, character2.clientID, json1, json2);
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void TradeItemsBetweenCharactersServerRpc(ulong character1ID, ulong character2ID, string character1To2Json, string charactre2To1Json)
+    {
+        Character character1 = null;
+        Character character2 = null;
+        if (_characters.ContainsKey(character1ID))
+        {
+            character1 = _characters[character1ID];
+        }
+        if (_characters.ContainsKey(character2ID))
+        {
+            character2 = _characters[character2ID];
+        }
+        if (character1 == null || character2 == null || character1 == character2)
+        {
+            return;
+        }
+
+        Dictionary<string, int> serializable1To2 = JsonMapper.ToObject<Dictionary<string, int>>(character1To2Json);
+        Dictionary<string, int> serializable2To1 = JsonMapper.ToObject<Dictionary<string, int>>(charactre2To1Json);
+
+        Dictionary<string, int> items1To2 = new Dictionary<string, int>();
+        Dictionary<string, (string, int)> splitItems1 = new Dictionary<string, (string, int)>();
+
+        Dictionary<string, int> items2To1 = new Dictionary<string, int>();
+        Dictionary<string, (string, int)> splitItems2 = new Dictionary<string, (string, int)>();
+
+        foreach (var item in serializable1To2)
+        {
+            for (int i = 0; i < character1.inventory.Count; i++)
+            {
+                if (item.Key == character1.inventory[i].networkID)
+                {
+                    int count = item.Value;
+                    int remained = 0;
+                    if (character1.inventory[i].GetType() == typeof(Ammo))
+                    {
+                        Ammo ammo = (Ammo)character1.inventory[i];
+                        if (count <= 0)
+                        {
+                            break;
+                        }
+                        else if (ammo.amount < count)
+                        {
+                            count = ammo.amount;
+                        }
+                        else if (ammo.amount > count)
+                        {
+                            remained = ammo.amount - count;
+                            ammo.amount = count;
+                        }
+                    }
+                    else if (character1.inventory[i].GetType() == typeof(Weapon))
+                    {
+                        count = ((Weapon)character1.inventory[i]).ammo;
+                    }
+                    else
+                    {
+                        count = 1;
+                    }
+                    if (remained > 0)
+                    {
+                        Item prefab = PrefabManager.singleton.GetItemPrefab(character1.inventory[i].id);
+                        if (prefab != null)
+                        {
+                            Item splitItem = Instantiate(prefab, transform);
+                            splitItem.networkID = System.Guid.NewGuid().ToString();
+                            if (splitItem.GetType() == typeof(Ammo))
+                            {
+                                ((Ammo)splitItem).amount = remained;
+                            }
+                            character1.AddItemToInventoryLocally(splitItem);
+                            splitItems1.Add(splitItem.networkID, (character1.inventory[i].id, remained));
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    character2.AddItemToInventoryLocally(character1.inventory[i]);
+                    character1.RemoveItemFromInventoryLocally(character1.inventory[i]);
+                    items1To2.Add(item.Key, count);
+                    break;
+                }
+            }
+        }
+
+        foreach (var item in serializable2To1)
+        {
+            for (int i = 0; i < character2.inventory.Count; i++)
+            {
+                if (item.Key == character2.inventory[i].networkID)
+                {
+                    int count = item.Value;
+                    int remained = 0;
+                    if (character2.inventory[i].GetType() == typeof(Ammo))
+                    {
+                        Ammo ammo = (Ammo)character2.inventory[i];
+                        if (count <= 0)
+                        {
+                            break;
+                        }
+                        else if (ammo.amount < count)
+                        {
+                            count = ammo.amount;
+                        }
+                        else if (ammo.amount > count)
+                        {
+                            remained = ammo.amount - count;
+                            ammo.amount = count;
+                        }
+                    }
+                    else if (character2.inventory[i].GetType() == typeof(Weapon))
+                    {
+                        count = ((Weapon)character2.inventory[i]).ammo;
+                    }
+                    else
+                    {
+                        count = 1;
+                    }
+                    if (remained > 0)
+                    {
+                        Item prefab = PrefabManager.singleton.GetItemPrefab(character2.inventory[i].id);
+                        if (prefab != null)
+                        {
+                            Item splitItem = Instantiate(prefab, transform);
+                            splitItem.networkID = System.Guid.NewGuid().ToString();
+                            if (splitItem.GetType() == typeof(Ammo))
+                            {
+                                ((Ammo)splitItem).amount = remained;
+                            }
+                            character2.AddItemToInventoryLocally(splitItem);
+                            splitItems2.Add(splitItem.networkID, (character2.inventory[i].id, remained));
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    character1.AddItemToInventoryLocally(character2.inventory[i]);
+                    character2.RemoveItemFromInventoryLocally(character2.inventory[i]);
+                    items2To1.Add(item.Key, count);
+                    break;
+                }
+            }
+        }
+
+        if (items2To1.Count > 0 || items1To2.Count > 0)
+        {
+            string json1To2 = JsonMapper.ToJson(items1To2);
+            string json1Split = JsonMapper.ToJson(splitItems1);
+            string json2To1 = JsonMapper.ToJson(items2To1);
+            string json2Split = JsonMapper.ToJson(splitItems2);
+            TradeItemsBetweenCharactersClientRpc(character1ID, character2ID, json1To2, json1Split, json2To1, json2Split);
+        }
+    }
+
+    [ClientRpc]
+    private void TradeItemsBetweenCharactersClientRpc(ulong character1ID, ulong character2ID, string json1To2, string json1Split, string json2To1, string json2Split)
+    {
+        Character character1 = null;
+        Character character2 = null;
+        Character[] allCharacters = FindObjectsByType<Character>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        if (allCharacters != null)
+        {
+            for (int i = 0; i < allCharacters.Length; i++)
+            {
+                if (allCharacters[i].clientID == character1ID)
+                {
+                    character1 = allCharacters[i];
+                }
+                else if (allCharacters[i].clientID == character2ID)
+                {
+                    character2 = allCharacters[i];
+                }
+                if (character1 != null && character2 != null)
+                {
+                    break;
+                }
+            }
+        }
+        if (character1 == null || character2 == null || character1 == character2)
+        {
+            return;
+        }
+
+        Dictionary<string, int> items1To2 = JsonMapper.ToObject<Dictionary<string, int>>(json1To2);
+        Dictionary<string, (string, int)> splitItems1 = JsonMapper.ToObject<Dictionary<string, (string, int)>>(json1Split);
+        Dictionary<string, int> items2To1 = JsonMapper.ToObject<Dictionary<string, int>>(json2To1);
+        Dictionary<string, (string, int)> splitItems2 = JsonMapper.ToObject<Dictionary<string, (string, int)>>(json2Split);
+
+        foreach (var item in items1To2)
+        {
+            bool found = false;
+            for (int i = 0; i < character1.inventory.Count; i++)
+            {
+                if (character1.inventory[i].networkID == item.Key)
+                {
+                    if (character1.inventory[i].GetType() == typeof(Ammo))
+                    {
+                        ((Ammo)character1.inventory[i]).amount = item.Value;
+                    }
+                    else if (character1.inventory[i].GetType() == typeof(Weapon))
+                    {
+                        ((Weapon)character1.inventory[i]).ammo = item.Value;
+                    }
+                    character2.AddItemToInventoryLocally(character1.inventory[i]);
+                    character1.RemoveItemFromInventoryLocally(character1.inventory[i]);
+                    found = true;
+                    break;
+                }
+            }
+            if (found == false)
+            {
+                // Problem
+            }
+        }
+
+        foreach (var item in splitItems1)
+        {
+            Item prefab = PrefabManager.singleton.GetItemPrefab(item.Value.Item1);
+            if (prefab != null)
+            {
+                Item splitItem = Instantiate(prefab, transform);
+                splitItem.networkID = item.Key;
+                if (item.Key.GetType() == typeof(Ammo))
+                {
+                    ((Ammo)splitItem).amount = item.Value.Item2;
+                }
+                character1.AddItemToInventoryLocally(splitItem);
+            }
+        }
+
+        foreach (var item in items2To1)
+        {
+            bool found = false;
+            for (int i = 0; i < character2.inventory.Count; i++)
+            {
+                if (character2.inventory[i].networkID == item.Key)
+                {
+                    if (character2.inventory[i].GetType() == typeof(Ammo))
+                    {
+                        ((Ammo)character2.inventory[i]).amount = item.Value;
+                    }
+                    else if (character2.inventory[i].GetType() == typeof(Weapon))
+                    {
+                        ((Weapon)character2.inventory[i]).ammo = item.Value;
+                    }
+                    character1.AddItemToInventoryLocally(character2.inventory[i]);
+                    character2.RemoveItemFromInventoryLocally(character2.inventory[i]);
+                    found = true;
+                    break;
+                }
+            }
+            if (found == false)
+            {
+                // Problem
+            }
+        }
+
+        foreach (var item in splitItems2)
+        {
+            Item prefab = PrefabManager.singleton.GetItemPrefab(item.Value.Item1);
+            if (prefab != null)
+            {
+                Item splitItem = Instantiate(prefab, transform);
+                splitItem.networkID = item.Key;
+                if (item.Key.GetType() == typeof(Ammo))
+                {
+                    ((Ammo)splitItem).amount = item.Value.Item2;
+                }
+                character2.AddItemToInventoryLocally(splitItem);
+            }
+        }
     }
 
 }
