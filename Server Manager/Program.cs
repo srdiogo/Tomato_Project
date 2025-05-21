@@ -11,7 +11,6 @@ namespace DevelopersHub.RealtimeNetworking.Server
 
         static void Main(string[] args)
         {
-            AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnExit);
             if (Manager.enabled)
             {
                 Manager.Initialize();
@@ -60,12 +59,5 @@ namespace DevelopersHub.RealtimeNetworking.Server
             Tools.LogError(ex.Message, ex.StackTrace, "Unhandled");
         }
 
-        private static void OnExit(object sender, EventArgs e)
-        {
-            if (Manager.enabled)
-            {
-                Manager.OnExit();
-            }
-        }
     }
 }

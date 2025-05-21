@@ -9,6 +9,41 @@ namespace DevelopersHub.RealtimeNetworking.Server
     class Netcode
     {
 
+        private const string server_executable_path = @"C:\Users\renat\OneDrive\Desktop\Netcode Server\Tomato Project.exe";
+        private const int max_server_life_seconds = 21600;
+        
+        private static void OverridePlayerInitialData(ref Data.RuntimePlayer player, Microsoft.Data.Sqlite.SqliteConnection connection)
+        {
+            /*
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = string.Format(@"SELECT x, y, z FROM whatever WHERE id = {0};", player.id);
+                using (var reader = command.ExecuteReader())
+                {
+                    if (reader.HasRows)
+                    {
+                        while (reader.Read())
+                        {
+
+                        }
+                    }
+                }
+            }
+            */
+        }
+
+        private static void OnGameResultReceived(Data.RuntimeResult result)
+        {
+            /*
+            using (var connection = Sqlite.connection)
+            {
+                connection.Open();
+
+                connection.Close();
+            }
+            */
+        }
+
         #region Internal
 
         private static int process_check_period = 60;
@@ -22,25 +57,17 @@ namespace DevelopersHub.RealtimeNetworking.Server
             string readyPath = string.Format("{0}Ready{1}", tempPath, Path.DirectorySeparatorChar);
             if (Directory.Exists(resultPath))
             {
-                Directory.Delete(resultPath, true);
+                Directory.Delete(resultPath);
             }
             if (Directory.Exists(loadPath))
             {
-                Directory.Delete(loadPath, true);
+                Directory.Delete(loadPath);
             }
             if (Directory.Exists(readyPath))
             {
-                Directory.Delete(readyPath, true);
+                Directory.Delete(readyPath);
             }
             laast_process_check = DateTime.Now;
-        }
-
-        public static void OnExit()
-        {
-            for (int i = 0; i < games.Count; i++)
-            {
-                KillGameProcess(i);
-            }
         }
 
         public static void Update()
@@ -121,7 +148,7 @@ namespace DevelopersHub.RealtimeNetworking.Server
                                     string serializedData = File.ReadAllText(file);
                                     File.Delete(file);
                                     Data.RuntimeResult result = Tools.Desrialize<Data.RuntimeResult>(Tools.DecompressString(serializedData));
-                                    Terminal.OnNetcodeGameResultReceived(result);
+                                    OnGameResultReceived(result);
                                 }
                                 catch (Exception)
                                 {
@@ -161,18 +188,15 @@ namespace DevelopersHub.RealtimeNetworking.Server
                         }
                     }
                 }
-                if(Terminal.netcode_max_server_life_seconds > 0)
+                double process_check_seconds = (DateTime.Now - laast_process_check).TotalSeconds;
+                if(process_check_seconds >= process_check_period)
                 {
-                    double process_check_seconds = (DateTime.Now - laast_process_check).TotalSeconds;
-                    if (process_check_seconds >= process_check_period)
+                    laast_process_check = DateTime.Now;
+                    for (int i = 0; i < games.Count; i++)
                     {
-                        laast_process_check = DateTime.Now;
-                        for (int i = 0; i < games.Count; i++)
+                        if (games[i] != null && (DateTime.Now - games[i].start).TotalSeconds >= max_server_life_seconds)
                         {
-                            if (games[i] != null && (DateTime.Now - games[i].start).TotalSeconds >= Terminal.netcode_max_server_life_seconds)
-                            {
-                                KillGameProcess(i);
-                            }
+                            KillGameProcess(i);
                         }
                     }
                 }
@@ -245,7 +269,7 @@ namespace DevelopersHub.RealtimeNetworking.Server
                 }
                 if (game.room.players.Count > 0)
                 {
-                    if (File.Exists(Terminal.netcode_server_executable_path))
+                    if (File.Exists(server_executable_path))
                     {
                         try
                         {
@@ -267,7 +291,7 @@ namespace DevelopersHub.RealtimeNetworking.Server
                             string serializedData = Tools.CompressString(Tools.Serialize<Data.RuntimeGame>(data));
                             File.WriteAllText(filePath, serializedData);
                             netcodeGame.process = new Process();
-                            netcodeGame.process.StartInfo.FileName = Terminal.netcode_server_executable_path;
+                            netcodeGame.process.StartInfo.FileName = server_executable_path;
                             netcodeGame.process.StartInfo.WindowStyle = ProcessWindowStyle.Minimized;
                             netcodeGame.process.StartInfo.CreateNoWindow = true;
                             netcodeGame.process.StartInfo.UseShellExecute = false;
@@ -307,10 +331,9 @@ namespace DevelopersHub.RealtimeNetworking.Server
                     player.id = game.room.players[i].id;
                     player.username = game.room.players[i].username;
                     player.team = game.room.players[i].team;
-                    player.characters = Manager.GetRuntimeCharacters(player.id, true, true, connection);
+                    OverridePlayerInitialData(ref player, connection);
                     data.players.Add(player);
                 }
-                Terminal.OverrideGameInitialData(ref data, connection);
                 connection.Close();
             }
             return data;
