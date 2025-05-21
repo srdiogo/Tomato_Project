@@ -22,6 +22,13 @@ public class SessionManager : NetworkBehaviour
 
     private Dictionary<ulong, Character> _characters = new Dictionary<ulong, Character>();
 
+    private static Role _role = Role.Client; public static Role role { get { return _role; } set { _role = value; } }
+
+    public enum Role
+    {
+        Server = 1, Client = 2
+    }
+
     public void StartServer()
     {
         NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
@@ -66,7 +73,7 @@ public class SessionManager : NetworkBehaviour
 
             _characters.Add(serverRpcParams.Receive.SenderClientId, character);
 
-            Dictionary<string, (string, int)> items = new Dictionary<string, (string, int)> { { "0", ("AKM", 30) }, { "1", ("h", 1000) } };
+            Dictionary<string, (string, int)> items = new Dictionary<string, (string, int)> { { "0", ("Scar", 30) }, { "1", ("7.62x39mm", 1000) } };
             List<string> itemsId = new List<string>();
             List<string> equippedIds = new List<string>();
             for (int i = 0; i < items.Count; i++)
