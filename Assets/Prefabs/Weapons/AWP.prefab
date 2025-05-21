@@ -88,10 +88,12 @@ MonoBehaviour:
   _clipSize: 30
   _handKick: 5
   _bodyKick: 3
-  _leftHandPosition: {x: 0.06394, y: -0.3219, z: -0.0294}
-  _leftHandRotation: {x: 42.261, y: -173.398, z: 213.599}
-  _rightHandPosition: {x: 0.0073, y: -0.2231, z: -0.0339}
-  _rightHandRotation: {x: 90, y: 3.271, z: 178.527}
+  rigData:
+  - chatacterId: teuprimo
+    leftHandPosition: {x: 0.014, y: 0.289, z: 0.116}
+    leftHandRotation: {x: 10.119228, y: -126.60361, z: 71.65323}
+    rightHandPosition: {x: -0.082, y: 0.226, z: 0.032}
+    rightHandRotation: {x: -90, y: 90, z: 0}
   _muzzle: {fileID: 4185783662698357493}
   _flash: {fileID: 8545018730061454217}
   _projectile: {fileID: 282636753719506890, guid: ad14b204279af7b43ada2ceb25cf663a, type: 3}

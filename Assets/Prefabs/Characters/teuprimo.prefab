@@ -276,7 +276,7 @@ Transform:
   m_GameObject: {fileID: 1113901596337736444}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -5.9381733e-24, w: 1}
-  m_LocalPosition: {x: -1.318, y: 1.428, z: 1.52}
+  m_LocalPosition: {x: 0, y: 1.428, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1070,9 +1070,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Weight: 1
   m_Data:
-    m_Root: {fileID: 0}
-    m_Mid: {fileID: 0}
-    m_Tip: {fileID: 0}
+    m_Root: {fileID: 1927153828927162810}
+    m_Mid: {fileID: 1930481111784885470}
+    m_Tip: {fileID: 2422757373240297711}
     m_Target: {fileID: 7027603361385406037}
     m_Hint: {fileID: 0}
     m_TargetPositionWeight: 1
@@ -2559,8 +2559,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5647058428033140150}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.82266605, y: 0.09695461, z: 0.23809853, w: -0.5070795}
-  m_LocalPosition: {x: 0.067999974, y: -0.28499988, z: -0.06900008}
+  m_LocalRotation: {x: 0.0003890628, y: -0.000019813577, z: -1, w: -0.00000052618225}
+  m_LocalPosition: {x: -0.00000047486515, y: -1.1806946, z: 0.000022493345}
   m_LocalScale: {x: 0.10000001, y: 0.09999999, z: 0.099999994}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2923,7 +2923,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Weight: 1
   m_Data:
-    m_ConstrainedObject: {fileID: 0}
+    m_ConstrainedObject: {fileID: 6627319653009770133}
     m_SourceObjects:
       m_Length: 1
       m_Item0:
@@ -2953,8 +2953,8 @@ MonoBehaviour:
     m_Offset: {x: 0, y: 0, z: 0}
     m_MinLimit: -180
     m_MaxLimit: 180
-    m_AimAxis: 3
-    m_UpAxis: 5
+    m_AimAxis: 2
+    m_UpAxis: 0
     m_WorldUpType: 0
     m_WorldUpObject: {fileID: 0}
     m_WorldUpAxis: 2
@@ -3218,6 +3218,22 @@ MonoBehaviour:
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0}
     m_Visible: 1
+  - m_Transform: {fileID: 7027603361385406037}
+    m_Style:
+      shape: {fileID: 4300000, guid: 687b70eb9c49243639f9379f6965034f, type: 2}
+      color: {r: 1, g: 0, b: 0, a: 0.5}
+      size: 0.1
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0}
+    m_Visible: 1
+  - m_Transform: {fileID: 0}
+    m_Style:
+      shape: {fileID: 4300000, guid: e050c2b16fe384bd994474655a4b4968, type: 2}
+      color: {r: 1, g: 0, b: 0, a: 0.5}
+      size: 0.1
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0}
+    m_Visible: 1
 --- !u!1 &6447150900420881949
 GameObject:
   m_ObjectHideFlags: 0
@@ -3451,7 +3467,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_Actions: {fileID: -944628639613478452, guid: 4419d82f33d36e848b3ed5af4c8da37e, type: 3}
   m_NotificationBehavior: 0
   m_UIInputModule: {fileID: 0}
   m_DeviceLostEvent:
@@ -3605,7 +3621,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 4049895341
+  GlobalObjectIdHash: 3499802638
   InScenePlacedSourceGlobalObjectIdHash: 4155361643
   DeferredDespawnTick: 0
   Ownership: 1
@@ -4084,7 +4100,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Weight: 1
   m_Data:
-    m_ConstrainedObject: {fileID: 0}
+    m_ConstrainedObject: {fileID: 8294352280718016147}
     m_SourceObjects:
       m_Length: 1
       m_Item0:
