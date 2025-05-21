@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 
@@ -20,10 +21,17 @@ public class RigManager : MonoBehaviour
     private Vector3 _originalRightHandOffset = Vector3.zero;
     private Vector3 _originalBodyOffset = Vector3.zero;
 
+    public Transform leftHandTarget { get { return _leftHand.data.target; } }
+
     private void Awake()
     {
         _originalRightHandOffset = _rightHand.data.offset;
         _originalBodyOffset = _body.data.offset;
+        if (_leftHand.data.target != null && Application.isEditor && _leftHand.data.target.GetComponent<EditorTarget>() == null)
+        {
+            EditorTarget editorTarget = _leftHand.data.target.AddComponent<EditorTarget>();
+            editorTarget.character = GetComponent<Character>();
+        }
     }
 
     public void SetLeftHandGripData(Vector3 position, Vector3 rotation)

@@ -117,6 +117,7 @@ namespace StarterAssets
             _controller = GetComponent<CharacterController>();
             _input = GetComponent<StarterAssetsInputs>();
             _playerInput = GetComponent<PlayerInput>();
+            _playerInput.enabled = false;
         }
 
         public void DestroyControllers()
@@ -142,6 +143,7 @@ namespace StarterAssets
 
                     // reset our timeouts on start
                     _jumpTimeoutDelta = JumpTimeout;
+                    _playerInput.enabled = true;
                     _initialized = true;
                 }
                 else
