@@ -12,7 +12,7 @@ namespace DevelopersHub.RealtimeNetworking.Server
         public const string log_directory_path = @"C:\Log\realtime_networking\";
 
         #region Extensions
-        public const string netcode_server_executable_path = @"C:\Users\renat\OneDrive\Desktop\Netcode Server\Tomato Project.exe";
+        public const string netcode_server_executable_path = @"C:\Users\erikv\Desktop\Servidor\Tomato Project.exe";
         public const int netcode_max_server_life_seconds = 21600;
         #endregion
 
@@ -43,7 +43,44 @@ namespace DevelopersHub.RealtimeNetworking.Server
 
         public static void OnAuthenticated(long accountID, bool wasSignedUp, Microsoft.Data.Sqlite.SqliteConnection connection)
         {
+            if (wasSignedUp)
+            {
+                Data.RuntimeCharacter character = new Data.RuntimeCharacter();
+                character.tag = "Bot";
+                character.selected = true;
+                long characterID = Manager.CreateCharacter(accountID, character, connection);
 
+                Data.RuntimeEquipment weapon = new Data.RuntimeEquipment();
+                weapon.tag = "AKM";
+                Manager.CreateEquipment(accountID, characterID, weapon);
+
+                character = new Data.RuntimeCharacter();
+                character.tag = "teuprimo";
+                character.selected = false;
+                characterID = Manager.CreateCharacter(accountID, character, connection);
+
+                weapon = new Data.RuntimeEquipment();
+                weapon.tag = "AWP";
+                Manager.CreateEquipment(accountID, characterID, weapon);
+
+                character = new Data.RuntimeCharacter();
+                character.tag = "Tomatina";
+                character.selected = false;
+                characterID = Manager.CreateCharacter(accountID, character, connection);
+
+                weapon = new Data.RuntimeEquipment();
+                weapon.tag = "AKM";
+                Manager.CreateEquipment(accountID, characterID, weapon);
+
+                character = new Data.RuntimeCharacter();
+                character.tag = "Thomas";
+                character.selected = false;
+                characterID = Manager.CreateCharacter(accountID, character, connection);
+
+                weapon = new Data.RuntimeEquipment();
+                weapon.tag = "AWP";
+                Manager.CreateEquipment(accountID, characterID, weapon);
+            }
         }
 
         public static (Data.PurchaseResult, int) OverridePurchase(long accountID, int itemCategory, int itemID, int itemLevel, int currencyID, Microsoft.Data.Sqlite.SqliteConnection connection)
