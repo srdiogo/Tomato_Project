@@ -45,12 +45,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _items:
-  - {fileID: 3468164409516480177, guid: 79ca460ae02adcb429bc65285b0b40f4, type: 3}
+  - {fileID: 4652891223555947361, guid: fa2bb12beb31bd146bae822543279d0b, type: 3}
   - {fileID: 3707108064623708630, guid: b2c3932716a19f249815b6447515386a, type: 3}
-  - {fileID: 4652891223555947361, guid: 246080d89c58a754c9caa95ce79fecda, type: 3}
+  - {fileID: 4652891223555947361, guid: fa2bb12beb31bd146bae822543279d0b, type: 3}
   - {fileID: 9138328683385369945, guid: 88973355146f3bc4f927c182c64de2b6, type: 3}
   _charactors:
-  - {fileID: 5134599840964547809, guid: c347c3e76cc79e5438821c3f6597c0d4, type: 3}
-  - {fileID: 3972001506475783695, guid: eeb91951a9700824d9b58d6aa272fb6a, type: 3}
   - {fileID: 6085912550182473730, guid: 425791f056e049b4dada4950e19bfe47, type: 3}
   - {fileID: 4442302707006809459, guid: 85789de6b7a7ae246a3c4f17a9500625, type: 3}

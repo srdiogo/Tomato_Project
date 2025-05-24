@@ -46,30 +46,12 @@ namespace DevelopersHub.RealtimeNetworking.Server
             if (wasSignedUp)
             {
                 Data.RuntimeCharacter character = new Data.RuntimeCharacter();
-                character.tag = "Bot";
+                character.tag = "Tomatina";
                 character.selected = true;
                 long characterID = Manager.CreateCharacter(accountID, character, connection);
 
                 Data.RuntimeEquipment weapon = new Data.RuntimeEquipment();
-                weapon.tag = "AKM";
-                Manager.CreateEquipment(accountID, characterID, weapon);
-
-                character = new Data.RuntimeCharacter();
-                character.tag = "teuprimo";
-                character.selected = false;
-                characterID = Manager.CreateCharacter(accountID, character, connection);
-
-                weapon = new Data.RuntimeEquipment();
-                weapon.tag = "AWP";
-                Manager.CreateEquipment(accountID, characterID, weapon);
-
-                character = new Data.RuntimeCharacter();
-                character.tag = "Tomatina";
-                character.selected = false;
-                characterID = Manager.CreateCharacter(accountID, character, connection);
-
-                weapon = new Data.RuntimeEquipment();
-                weapon.tag = "AKM";
+                weapon.tag = "TomatoGun";
                 Manager.CreateEquipment(accountID, characterID, weapon);
 
                 character = new Data.RuntimeCharacter();
@@ -78,7 +60,7 @@ namespace DevelopersHub.RealtimeNetworking.Server
                 characterID = Manager.CreateCharacter(accountID, character, connection);
 
                 weapon = new Data.RuntimeEquipment();
-                weapon.tag = "AWP";
+                weapon.tag = "TomatoGun";
                 Manager.CreateEquipment(accountID, characterID, weapon);
             }
         }
